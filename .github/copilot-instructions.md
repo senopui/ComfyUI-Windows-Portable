@@ -29,8 +29,8 @@ ComfyUI-Windows-Portable is a Windows portable package with 40+ custom nodes pre
 - Log key versions for debugging purposes
 
 ### Batch File Patterns
-- Use `%~dp0` for script directory navigation
-- Prepend portable Git to PATH: `set PATH=%PATH%;%~dp0\MinGit\cmd`
+- Use `%~dp0` for script directory navigation (includes trailing backslash)
+- Prepend portable Git to PATH: `set PATH=%PATH%;%~dp0MinGit\cmd`
 - Use `setlocal`/`endlocal` for environment isolation
 
 ### Dependency Management
