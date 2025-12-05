@@ -28,10 +28,10 @@ jobs:
 
         - name: Validate Maximum Fidelity Launcher
           shell: bash
-          working-directory: builder-cu130/ComfyUI_Windows_portable/ExtraScripts
+          working-directory: builder-cu130/ComfyUI_Windows_portable
           run: |
-            echo "Testing run_maximum_fidelity.bat launcher..."
-            timeout 120 ../python_standalone/python.exe -s ../ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --quick-test-for-ci 2>&1 | tee maximum_fidelity_test.log || true
+            echo "Testing maximum fidelity mode (disable xformers and smart memory)..."
+            timeout 120 ./python_standalone/python.exe -s ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --quick-test-for-ci 2>&1 | tee maximum_fidelity_test.log || true
             if grep -q "Traceback" maximum_fidelity_test.log; then
               echo "ERROR: Traceback detected in maximum fidelity launcher test!"
               cat maximum_fidelity_test.log
@@ -41,10 +41,10 @@ jobs:
 
         - name: Validate Optimized Fidelity Launcher
           shell: bash
-          working-directory: builder-cu130/ComfyUI_Windows_portable/ExtraScripts
+          working-directory: builder-cu130/ComfyUI_Windows_portable
           run: |
-            echo "Testing run_optimized_fidelity.bat launcher..."
-            timeout 120 ../python_standalone/python.exe -s ../ComfyUI/main.py --cpu --windows-standalone-build --auto-precision --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log || true
+            echo "Testing optimized fidelity mode (auto precision enabled)..."
+            timeout 120 ./python_standalone/python.exe -s ComfyUI/main.py --cpu --windows-standalone-build --auto-precision --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log || true
             if grep -q "Traceback" optimized_fidelity_test.log; then
               echo "ERROR: Traceback detected in optimized fidelity launcher test!"
               cat optimized_fidelity_test.log
