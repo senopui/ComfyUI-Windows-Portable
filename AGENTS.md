@@ -4,7 +4,7 @@
 
 The primary goal is to maintain a nightly/bleeding-edge Windows portable package for ComfyUI that:
 
-1. **Uses latest stable stack**
+1. **Uses latest nightly stack**
    - Python 3.13 from python-build-standalone
    - PyTorch nightly builds with CUDA 13.0
    - Latest performance optimizations
@@ -145,7 +145,7 @@ gcs='git clone --depth=1 --no-tags --recurse-submodules --shallow-submodules'
 - [ ] Python 3.13 installed successfully
 - [ ] PyTorch nightly cu130 installed
 - [ ] FlashAttention wheel installed
-- [ ] SageAttention wheel installed  
+- [ ] SageAttention wheel installed
 - [ ] triton-windows installed (version <3.6)
 - [ ] Nunchaku wheel installed
 - [ ] All pak files processed without errors

@@ -52,7 +52,7 @@ ComfyUI-Windows-Portable is a Windows portable package with 40+ custom nodes pre
 - Install PyTorch nightly from cu130 index (pak3.txt)
 - Install performance wheels:
   - FlashAttention (via mjun0812 prebuilt wheels)
-  - xformers (commented out in pak3.txt, installed elsewhere)
+  - xformers (via curated AI-windows-whl wheels; commented out in pak3.txt)
   - SageAttention+triton-windows (woct0rdho builds)
   - NATTEN (via curated AI-windows-whl)
   - Nunchaku (nunchaku-tech)
