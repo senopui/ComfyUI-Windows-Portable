@@ -30,7 +30,7 @@ Install in this order:
    - torchaudio (nightly cu130)
 
 2. **FlashAttention** (pak8.txt)
-   - Source: `https://github.com/mjun0812/flash-attention-prebuild-wheels`
+   - Source: `https://github.com/mjun0812/flash-attention-prebuilt-wheels`
    - Version: 2.8.3+cu130torch2.9 for cp313
    - Wheel: `flash_attn-2.8.3+cu130torch2.9-cp313-cp313-win_amd64.whl`
 

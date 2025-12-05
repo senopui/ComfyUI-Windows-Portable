@@ -10,7 +10,7 @@ The primary goal is to maintain a nightly/bleeding-edge Windows portable package
    - Latest performance optimizations
 
 2. **Includes performance wheels**
-   - FlashAttention (mjun0812 prebuild wheels)
+   - FlashAttention (mjun0812 prebuilt wheels)
    - xformers (when available for cu130)
    - SageAttention+triton-windows (woct0rdho builds)
    - NATTEN (curated AI-windows-whl)
@@ -115,7 +115,7 @@ The primary goal is to maintain a nightly/bleeding-edge Windows portable package
 ```
 
 ### Performance Wheels Sources
-1. **FlashAttention**: `https://github.com/mjun0812/flash-attention-prebuild-wheels`
+1. **FlashAttention**: `https://github.com/mjun0812/flash-attention-prebuilt-wheels`
 2. **SageAttention**: `https://github.com/woct0rdho/SageAttention`
 3. **triton-windows**: `https://github.com/woct0rdho/triton-windows`
 4. **Nunchaku**: `https://github.com/nunchaku-tech/nunchaku`

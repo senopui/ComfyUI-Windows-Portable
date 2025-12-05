@@ -1,7 +1,7 @@
 # ComfyUI-Windows-Portable Repository Instructions
 
 ## Overview
-ComfyUI-Windows-Portable is a Windows portable package with 40+ custom nodes pre-installed. This is a nightly/bleeding-edge build using CUDA 13 and PyTorch nightly stack with performance-optimized wheels.
+ComfyUI-Windows-Portable is a Windows portable package with 40+ custom nodes pre-installed. This is a nightly/bleeding-edge build using CUDA 13.0 and PyTorch nightly stack with performance-optimized wheels.
 
 - **Default port**: 8188
 - **Stack**: Python 3.13, PyTorch nightly with CUDA 13.0
@@ -51,7 +51,7 @@ ComfyUI-Windows-Portable is a Windows portable package with 40+ custom nodes pre
 - Install pip, wheel, setuptools
 - Install PyTorch nightly from cu130 index (pak3.txt)
 - Install performance wheels:
-  - FlashAttention (via mjun0812 prebuild wheels)
+  - FlashAttention (via mjun0812 prebuilt wheels)
   - xformers (commented out in pak3.txt, installed elsewhere)
   - SageAttention+triton-windows (woct0rdho builds)
   - NATTEN (via curated AI-windows-whl)
