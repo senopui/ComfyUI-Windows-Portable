@@ -2,21 +2,24 @@
 
 This directory contains specialized launcher scripts for ComfyUI with different performance and fidelity profiles.
 
-## Launcher Navigation Pattern
+## Launcher Location
 
-All launchers must use this directory navigation pattern:
-```batch
-cd /d %~dp0\..
-```
+**IMPORTANT**: Launchers in ExtraScripts/ directory are meant to be copied to the parent ComfyUI_Windows_portable/ directory before use. The "!Please copy these files to the parent folder first before using them" file indicates this requirement.
 
-This changes to the parent directory where the actual ComfyUI installation resides.
+Once copied to the parent directory, launchers use relative paths to access:
+- `.\python_standalone\python.exe` - Python executable
+- `ComfyUI\main.py` - ComfyUI main script
+- `MinGit\cmd` - Git commands
+- Other directories relative to the installation root
 
 ## PATH Configuration
 
-All launchers must prepend portable Git to PATH:
+All launchers must prepend portable Git to PATH using `%~dp0`:
 ```batch
 set PATH=%PATH%;%~dp0\MinGit\cmd;%~dp0\python_standalone\Scripts
 ```
+
+Where `%~dp0` refers to the directory containing the launcher (the installation root after copying).
 
 This ensures:
 - MinGit commands are available for updates
@@ -59,17 +62,15 @@ setlocal
 @REM Disables performance optimizations (xformers, smart memory) for best quality
 @REM Use this when you need the most accurate and stable results
 
-cd /d %~dp0\..
-
 @REM Set PATH to include portable Git and Python scripts
-set PATH=%PATH%;%~dp0\MinGit\cmd;%~dp0\python_standalone\Scripts
+set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 
 @REM Set cache directories
-set HF_HUB_CACHE=%~dp0\HuggingFaceHub
-set TORCH_HOME=%~dp0\TorchHome
-set PYTHONPYCACHEPREFIX=%~dp0\pycache
+set HF_HUB_CACHE=%~dp0HuggingFaceHub
+set TORCH_HOME=%~dp0TorchHome
+set PYTHONPYCACHEPREFIX=%~dp0pycache
 
-python_standalone\python.exe -s -B ComfyUI\main.py --disable-xformers --disable-smart-memory %*
+.\python_standalone\python.exe -s -B ComfyUI\main.py --disable-xformers --disable-smart-memory %*
 
 endlocal
 pause
@@ -119,17 +120,15 @@ setlocal
 @REM Auto-precision mode enabled for faster processing
 @REM Best for interactive work and fast iterations
 
-cd /d %~dp0\..
-
 @REM Set PATH to include portable Git and Python scripts
-set PATH=%PATH%;%~dp0\MinGit\cmd;%~dp0\python_standalone\Scripts
+set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 
 @REM Set cache directories
-set HF_HUB_CACHE=%~dp0\HuggingFaceHub
-set TORCH_HOME=%~dp0\TorchHome
-set PYTHONPYCACHEPREFIX=%~dp0\pycache
+set HF_HUB_CACHE=%~dp0HuggingFaceHub
+set TORCH_HOME=%~dp0TorchHome
+set PYTHONPYCACHEPREFIX=%~dp0pycache
 
-python_standalone\python.exe -s -B ComfyUI\main.py %*
+.\python_standalone\python.exe -s -B ComfyUI\main.py %*
 
 endlocal
 pause
@@ -140,18 +139,17 @@ pause
 ### Environment Variables
 All launchers should set these environment variables:
 ```batch
-set HF_HUB_CACHE=%~dp0\HuggingFaceHub
-set TORCH_HOME=%~dp0\TorchHome
-set PYTHONPYCACHEPREFIX=%~dp0\pycache
+set HF_HUB_CACHE=%~dp0HuggingFaceHub
+set TORCH_HOME=%~dp0TorchHome
+set PYTHONPYCACHEPREFIX=%~dp0pycache
 ```
 
 ### Script Structure
 ```batch
 @echo off                  # Suppress command echo
 setlocal                   # Isolate environment changes
-cd /d %~dp0\..            # Navigate to parent directory
-[set environment vars]     # Configure paths and cache
-[run command]             # Execute ComfyUI
+[set PATH and environment] # Configure paths and cache directories
+[run command]             # Execute ComfyUI with relative paths
 endlocal                   # Restore environment
 pause                      # Wait for user before closing
 ```
@@ -220,15 +218,15 @@ python_standalone\python.exe -s -B ComfyUI\main.py --quick-test-for-ci --cpu
 
 ### Path Issues
 If MinGit not found:
-- Verify MinGit was extracted properly
-- Check PATH setting includes correct directory
-- Use full path if necessary: `%~dp0..\MinGit\cmd`
+- Verify MinGit was extracted properly in the installation root
+- Check PATH setting uses `%~dp0MinGit\cmd`
+- Verify launcher was copied to installation root directory
 
 ### Python Not Found
 If python.exe not found:
-- Verify navigation with `cd /d %~dp0\..`
-- Check python_standalone directory exists
-- Use full path: `%~dp0..\python_standalone\python.exe`
+- Check python_standalone directory exists in installation root
+- Verify relative path `.\python_standalone\python.exe` is accessible
+- Confirm launcher is in the installation root directory, not in ExtraScripts/
 
 ### Performance Issues
 If optimized mode is slow:
