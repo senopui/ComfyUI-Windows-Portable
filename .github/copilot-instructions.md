@@ -92,7 +92,7 @@ ComfyUI-Windows-Portable is a Windows portable package with 40+ custom nodes pre
 - Prepend portable Git to PATH using %~dp0
 
 ### PATH Configuration
-All launchers should prepend portable Git (no backslash after %~dp0):
+All launchers should prepend portable Git (%~dp0 already includes trailing backslash):
 ```batch
 set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 ```

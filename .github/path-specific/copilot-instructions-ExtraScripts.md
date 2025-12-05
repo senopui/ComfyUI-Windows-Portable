@@ -19,7 +19,10 @@ All launchers must prepend portable Git to PATH using `%~dp0`:
 set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 ```
 
-Where `%~dp0` refers to the directory containing the launcher (the installation root after copying). The %~dp0 variable already includes a trailing backslash, so subdirectories are referenced directly (e.g., `%~dp0MinGit\cmd` not `%~dp0\MinGit\cmd`).
+Where `%~dp0` refers to the directory containing the launcher (the installation root after copying). The %~dp0 variable already includes a trailing backslash, so subdirectories are referenced directly.
+
+**Correct**: `%~dp0MinGit\cmd` (no extra backslash between %~dp0 and MinGit)  
+**Incorrect**: `%~dp0\MinGit\cmd` (extra backslash creates double backslash)
 
 This ensures:
 - MinGit commands are available for updates

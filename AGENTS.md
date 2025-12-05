@@ -187,7 +187,7 @@ gcs='git clone --depth=1 --no-tags --recurse-submodules --shallow-submodules'
 
 ### Traceback in Quick Test
 **Problem**: Quick test shows Python Traceback (unhandled exceptions, not normal debug output)  
-**Solution**: Check missing dependencies, verify all custom nodes initialized properly. Review the output to identify which custom node or package is causing the error (look for "Traceback (most recent call last):" followed by error details), then ensure its dependencies are installed in the appropriate pak*.txt file.
+**Solution**: Check missing dependencies and verify custom nodes initialized properly. Identify the failing component from the Traceback and ensure its dependencies are in the appropriate pak*.txt file.
 
 ### Performance Wheels Not Found
 **Problem**: FlashAttention or SageAttention not installed  
