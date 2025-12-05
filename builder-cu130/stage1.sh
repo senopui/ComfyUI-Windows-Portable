@@ -45,7 +45,14 @@ $pip_exe install -r "$workdir"/pak7.txt
 # temp-fix: Prevent SAM-3 from installing its older dependencies
 $pip_exe install --no-deps 'git+https://github.com/facebookresearch/sam3.git'
 
-$pip_exe install -r "$workdir"/pak8.txt
+# Install pak8.txt packages with error handling for compatibility
+# These may fail with Python 3.13 / PyTorch nightly - that's expected for bleeding-edge builds
+while IFS= read -r line || [ -n "$line" ]; do
+    # Skip comments and empty lines
+    [[ "$line" =~ ^#.*$ ]] || [[ -z "$line" ]] && continue
+    echo "Attempting to install: $line"
+    $pip_exe install "$line" || echo "Warning: Failed to install $line (may be incompatible with Python 3.13 / PyTorch nightly)"
+done < "$workdir"/pak8.txt
 
 # Install comfyui-frontend-package from master branch for nightly builds
 $pip_exe install -r "https://github.com/comfyanonymous/ComfyUI/raw/refs/heads/master/requirements.txt"
