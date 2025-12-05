@@ -76,23 +76,25 @@ ComfyUI-Windows-Portable is a Windows portable package with 40+ custom nodes pre
 
 ## Launchers
 
+**Note**: Launchers in ExtraScripts/ are meant to be copied to the installation root directory before use. Once copied, they use relative paths to access ComfyUI components.
+
 ### run_maximum_fidelity.bat
-- Command: `python_standalone\python.exe -s -B ComfyUI\main.py --disable-xformers --disable-smart-memory %*`
-- Navigation: `cd %~dp0\..` for directory context
-- Prepend portable Git to PATH
+- Command: `.\python_standalone\python.exe -s -B ComfyUI\main.py --disable-xformers --disable-smart-memory %*`
+- Uses relative paths (launcher is in installation root)
+- Prepend portable Git to PATH using %~dp0
 - Comments should explain focus on fidelity/stability over speed
 
 ### run_optimized_fidelity.bat
-- Command: `python_standalone\python.exe -s -B ComfyUI\main.py %*`
+- Command: `.\python_standalone\python.exe -s -B ComfyUI\main.py %*`
 - Uses default settings with xformers/FlashAttention enabled
+- Uses relative paths (launcher is in installation root)
 - Note auto-precision optimization
-- Prepend portable Git to PATH
-- Navigation: `cd %~dp0\..` for directory context
+- Prepend portable Git to PATH using %~dp0
 
 ### PATH Configuration
-All launchers should prepend portable Git:
+All launchers should prepend portable Git (no backslash after %~dp0):
 ```batch
-set PATH=%PATH%;%~dp0\MinGit\cmd;%~dp0\python_standalone\Scripts
+set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 ```
 
 ## CI Workflow

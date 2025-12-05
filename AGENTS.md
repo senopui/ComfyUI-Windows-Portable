@@ -167,10 +167,11 @@ gcs='git clone --depth=1 --no-tags --recurse-submodules --shallow-submodules'
 - [ ] All expected files present in package
 
 ### Launcher Testing
-- [ ] run_maximum_fidelity.bat exists
-- [ ] run_optimized_fidelity.bat exists
-- [ ] Both launchers use correct PATH configuration
-- [ ] Both launchers navigate with `cd /d %~dp0\..`
+- [ ] run_maximum_fidelity.bat exists in ExtraScripts/
+- [ ] run_optimized_fidelity.bat exists in ExtraScripts/
+- [ ] Both launchers use correct PATH configuration (%~dp0MinGit\cmd)
+- [ ] Both launchers use relative paths (.\python_standalone\python.exe)
+- [ ] Launchers copied to installation root work correctly
 - [ ] CPU launcher validation passes
 - [ ] No Traceback on test run
 

@@ -14,12 +14,12 @@ Once copied to the parent directory, launchers use relative paths to access:
 
 ## PATH Configuration
 
-All launchers must prepend portable Git to PATH using `%~dp0`:
+All launchers must prepend portable Git to PATH using `%~dp0` (note: no backslash after %~dp0):
 ```batch
-set PATH=%PATH%;%~dp0\MinGit\cmd;%~dp0\python_standalone\Scripts
+set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 ```
 
-Where `%~dp0` refers to the directory containing the launcher (the installation root after copying).
+Where `%~dp0` refers to the directory containing the launcher (the installation root after copying). The %~dp0 variable already includes a trailing backslash, so subdirectories are referenced directly.
 
 This ensures:
 - MinGit commands are available for updates
