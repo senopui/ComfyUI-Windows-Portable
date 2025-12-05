@@ -14,12 +14,12 @@ Once copied to the parent directory, launchers use relative paths to access:
 
 ## PATH Configuration
 
-All launchers must prepend portable Git to PATH using `%~dp0` (note: no backslash after %~dp0):
+All launchers must prepend portable Git to PATH using `%~dp0`:
 ```batch
 set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 ```
 
-Where `%~dp0` refers to the directory containing the launcher (the installation root after copying). The %~dp0 variable already includes a trailing backslash, so subdirectories are referenced directly.
+Where `%~dp0` refers to the directory containing the launcher (the installation root after copying). The %~dp0 variable already includes a trailing backslash, so subdirectories are referenced directly (e.g., `%~dp0MinGit\cmd` not `%~dp0\MinGit\cmd`).
 
 This ensures:
 - MinGit commands are available for updates
@@ -35,8 +35,10 @@ Maximum fidelity launcher prioritizes output quality and stability over performa
 
 ### Command
 ```batch
-python_standalone\python.exe -s -B ComfyUI\main.py --disable-xformers --disable-smart-memory %*
+.\python_standalone\python.exe -s -B ComfyUI\main.py --disable-xformers --disable-smart-memory %*
 ```
+
+Note: Use `.\` prefix to explicitly reference current directory executables.
 
 ### Flags Explained
 - `-s`: No site packages (isolated environment)
@@ -86,8 +88,10 @@ Optimized launcher uses default settings with all performance optimizations enab
 
 ### Command
 ```batch
-python_standalone\python.exe -s -B ComfyUI\main.py %*
+.\python_standalone\python.exe -s -B ComfyUI\main.py %*
 ```
+
+Note: Use `.\` prefix to explicitly reference current directory executables.
 
 ### Flags Explained
 - `-s`: No site packages (isolated environment)
