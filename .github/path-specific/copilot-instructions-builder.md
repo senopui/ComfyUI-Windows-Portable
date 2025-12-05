@@ -41,7 +41,7 @@ Install in this order:
 4. **SageAttention+triton-windows** (pak8.txt)
    - SageAttention: `https://github.com/woct0rdho/SageAttention`
    - Version: 2.2.0+cu130torch2.9.0andhigher
-   - triton-windows: `<3.6` version paired with PyTorch
+   - triton-windows: Version less than 3.6, paired with PyTorch (specified as `triton-windows<3.6` in pak8.txt)
    - Ref: `https://github.com/woct0rdho/triton-windows`
 
 5. **NATTEN** (via curated AI-windows-whl)

@@ -153,12 +153,17 @@ set PYTHONPYCACHEPREFIX=%~dp0pycache
 
 ### Script Structure
 ```batch
-@echo off                  # Suppress command echo
-setlocal                   # Isolate environment changes
-[set PATH and environment] # Configure paths and cache directories
-[run command]             # Execute ComfyUI with relative paths
-endlocal                   # Restore environment
-pause                      # Wait for user before closing
+@echo off
+@REM Suppress command echo
+setlocal
+@REM Isolate environment changes
+@REM [set PATH and environment variables here]
+@REM Configure paths and cache directories
+@REM [execute ComfyUI command with relative paths here]
+endlocal
+@REM Restore environment
+pause
+@REM Wait for user before closing
 ```
 
 ## Directory Structure
