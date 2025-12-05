@@ -15,6 +15,7 @@ The primary goal is to maintain a nightly/bleeding-edge Windows portable package
    - SageAttention+triton-windows (woct0rdho builds)
    - NATTEN (curated AI-windows-whl)
    - Nunchaku (nunchaku-tech)
+   - SpargeAttention (woct0rdho builds)
 
 3. **Maintains compatibility**
    - Keep port 8188 as default
@@ -199,7 +200,7 @@ gcs='git clone --depth=1 --no-tags --recurse-submodules --shallow-submodules'
 
 ### Launcher PATH Issues
 **Problem**: MinGit or Python not found by launcher  
-**Solution**: Verify PATH includes `%~dp0\MinGit\cmd` and `%~dp0\python_standalone\Scripts`
+**Solution**: Verify PATH includes `%~dp0MinGit\cmd` and `%~dp0python_standalone\Scripts`
 
 ### Build Timeout
 **Problem**: Stage takes too long, CI times out  
