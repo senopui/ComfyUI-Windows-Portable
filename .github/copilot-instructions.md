@@ -5,7 +5,7 @@ ComfyUI-Windows-Portable is a Windows portable package with 40+ custom nodes pre
 
 - **Default port**: 8188
 - **Stack**: Python 3.13, PyTorch nightly with CUDA 13.0
-- **Performance wheels**: FlashAttention, xformers, SageAttention+triton-windows, NATTEN, Nunchaku (via curated AI-windows-whl wheels)
+- **Performance wheels**: FlashAttention, xformers, SageAttention+triton-windows, NATTEN, Nunchaku, SpargeAttention (via curated AI-windows-whl wheels)
 - **Compatibility**: Works with character_select_stand_alone_app_test
 
 ## Tech Stack & Runtime

@@ -178,7 +178,8 @@ ComfyUI_Windows_portable/
 ├── ComfyUI/
 │   └── main.py
 ├── python_standalone/
-│   └── python.exe
+│   ├── python.exe
+│   └── Scripts/
 ├── MinGit/
 │   └── cmd/
 ├── HuggingFaceHub/

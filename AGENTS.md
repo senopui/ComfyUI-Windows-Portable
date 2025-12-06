@@ -13,9 +13,9 @@ The primary goal is to maintain a nightly/bleeding-edge Windows portable package
    - FlashAttention (mjun0812 prebuilt wheels)
    - xformers (when available for cu130)
    - SageAttention+triton-windows (woct0rdho builds)
-   - NATTEN (curated AI-windows-whl)
+   - NATTEN (via curated AI-windows-whl sources)
    - Nunchaku (nunchaku-tech)
-   - SpargeAttention (woct0rdho builds)
+   - SpargeAttention (SpargeAttn, woct0rdho builds)
 
 3. **Maintains compatibility**
    - Keep port 8188 as default
