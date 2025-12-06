@@ -4,17 +4,18 @@
 
 The primary goal is to maintain a nightly/bleeding-edge Windows portable package for ComfyUI that:
 
-1. **Uses latest stable stack**
+1. **Uses latest nightly stack**
    - Python 3.13 from python-build-standalone
    - PyTorch nightly builds with CUDA 13.0
    - Latest performance optimizations
 
 2. **Includes performance wheels**
-   - FlashAttention (mjun0812 prebuild wheels)
+   - FlashAttention (mjun0812 prebuilt wheels)
    - xformers (when available for cu130)
    - SageAttention+triton-windows (woct0rdho builds)
-   - NATTEN (curated AI-windows-whl)
+   - NATTEN (via curated AI-windows-whl sources)
    - Nunchaku (nunchaku-tech)
+   - SpargeAttention (SpargeAttn, woct0rdho builds)
 
 3. **Maintains compatibility**
    - Keep port 8188 as default
@@ -107,7 +108,7 @@ The primary goal is to maintain a nightly/bleeding-edge Windows portable package
 - **OS**: Windows (windows-latest runner for CI)
 - **Python**: 3.13 from python-build-standalone
 - **CUDA**: 13.0 support required
-- **Tools**: 7zip must be available at `C:\\Program Files\\7-Zip\\7z.exe`
+- **Tools**: 7zip must be available at `C:\Program Files\7-Zip\7z.exe`
 
 ### PyTorch Index
 ```
@@ -115,7 +116,7 @@ The primary goal is to maintain a nightly/bleeding-edge Windows portable package
 ```
 
 ### Performance Wheels Sources
-1. **FlashAttention**: `https://github.com/mjun0812/flash-attention-prebuild-wheels`
+1. **FlashAttention**: `https://github.com/mjun0812/flash-attention-prebuilt-wheels`
 2. **SageAttention**: `https://github.com/woct0rdho/SageAttention`
 3. **triton-windows**: `https://github.com/woct0rdho/triton-windows`
 4. **Nunchaku**: `https://github.com/nunchaku-tech/nunchaku`
@@ -145,7 +146,7 @@ gcs='git clone --depth=1 --no-tags --recurse-submodules --shallow-submodules'
 - [ ] Python 3.13 installed successfully
 - [ ] PyTorch nightly cu130 installed
 - [ ] FlashAttention wheel installed
-- [ ] SageAttention wheel installed  
+- [ ] SageAttention wheel installed
 - [ ] triton-windows installed (version <3.6)
 - [ ] Nunchaku wheel installed
 - [ ] All pak files processed without errors
@@ -169,8 +170,8 @@ gcs='git clone --depth=1 --no-tags --recurse-submodules --shallow-submodules'
 ### Launcher Testing
 - [ ] run_maximum_fidelity.bat exists in ExtraScripts/
 - [ ] run_optimized_fidelity.bat exists in ExtraScripts/
-- [ ] Both launchers use correct PATH configuration (%~dp0MinGit\\cmd)
-- [ ] Both launchers use relative paths (.\\python_standalone\\python.exe)
+- [ ] Both launchers use correct PATH configuration (%~dp0MinGit\cmd)
+- [ ] Both launchers use relative paths (.\python_standalone\python.exe)
 - [ ] Launchers copied to installation root work correctly
 - [ ] CPU launcher validation passes
 - [ ] No Traceback on test run
@@ -199,7 +200,7 @@ gcs='git clone --depth=1 --no-tags --recurse-submodules --shallow-submodules'
 
 ### Launcher PATH Issues
 **Problem**: MinGit or Python not found by launcher  
-**Solution**: Verify PATH includes `%~dp0\\MinGit\\cmd` and `%~dp0\\python_standalone\\Scripts`
+**Solution**: Verify PATH includes `%~dp0MinGit\cmd` and `%~dp0python_standalone\Scripts`
 
 ### Build Timeout
 **Problem**: Stage takes too long, CI times out  

@@ -1,11 +1,11 @@
 # ComfyUI-Windows-Portable Repository Instructions
 
 ## Overview
-ComfyUI-Windows-Portable is a Windows portable package with 40+ custom nodes pre-installed. This is a nightly/bleeding-edge build using CUDA 13 and PyTorch nightly stack with performance-optimized wheels.
+ComfyUI-Windows-Portable is a Windows portable package with 40+ custom nodes pre-installed. This is a nightly/bleeding-edge build using CUDA 13.0 and PyTorch nightly stack with performance-optimized wheels.
 
 - **Default port**: 8188
 - **Stack**: Python 3.13, PyTorch nightly with CUDA 13.0
-- **Performance wheels**: FlashAttention, xformers, SageAttention+triton-windows, NATTEN (via curated AI-windows-whl wheels)
+- **Performance wheels**: FlashAttention, xformers, SageAttention+triton-windows, NATTEN, Nunchaku, SpargeAttention (via curated AI-windows-whl wheels)
 - **Compatibility**: Works with character_select_stand_alone_app_test
 
 ## Tech Stack & Runtime
@@ -51,11 +51,12 @@ ComfyUI-Windows-Portable is a Windows portable package with 40+ custom nodes pre
 - Install pip, wheel, setuptools
 - Install PyTorch nightly from cu130 index (pak3.txt)
 - Install performance wheels:
-  - FlashAttention (via mjun0812 prebuild wheels)
-  - xformers (commented out in pak3.txt, installed elsewhere)
+  - FlashAttention (via mjun0812 prebuilt wheels)
+  - xformers (via curated AI-windows-whl wheels; commented out in pak3.txt)
   - SageAttention+triton-windows (woct0rdho builds)
   - NATTEN (via curated AI-windows-whl)
   - Nunchaku (nunchaku-tech)
+  - SpargeAttention (woct0rdho builds)
 - Install packages from pak2.txt through pak8.txt and pakY.txt
 - Use cu130 index URL for all PyTorch-related packages
 

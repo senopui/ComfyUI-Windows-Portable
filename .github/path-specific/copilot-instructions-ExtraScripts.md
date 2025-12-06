@@ -7,22 +7,22 @@ This directory contains specialized launcher scripts for ComfyUI with different 
 **IMPORTANT**: Launchers in ExtraScripts/ directory are meant to be copied to the parent ComfyUI_Windows_portable/ directory before use. The "!Please copy these files to the parent folder first before using them" file indicates this requirement.
 
 Once copied to the parent directory, launchers use relative paths to access:
-- `.\\python_standalone\\python.exe` - Python executable
-- `ComfyUI\\main.py` - ComfyUI main script
-- `MinGit\\cmd` - Git commands
+- `.\python_standalone\python.exe` - Python executable
+- `ComfyUI\main.py` - ComfyUI main script
+- `MinGit\cmd` - Git commands
 - Other directories relative to the installation root
 
 ## PATH Configuration
 
 All launchers must prepend portable Git to PATH using `%~dp0`:
 ```batch
-set PATH=%PATH%;%~dp0MinGit\\cmd;%~dp0python_standalone\\Scripts
+set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 ```
 
 Where `%~dp0` refers to the directory containing the launcher (the installation root after copying). The %~dp0 variable already includes a trailing backslash, so subdirectories are referenced directly.
 
-**Correct**: `%~dp0MinGit\\cmd` (no extra backslash between %~dp0 and MinGit)  
-**Incorrect**: `%~dp0\\MinGit\\cmd` (extra backslash creates double backslash)
+**Correct**: `%~dp0MinGit\cmd` (no extra backslash between %~dp0 and MinGit)  
+**Incorrect**: `%~dp0\MinGit\cmd` (extra backslash creates double backslash)
 
 This ensures:
 - MinGit commands are available for updates
@@ -38,10 +38,10 @@ Maximum fidelity launcher prioritizes output quality and stability over performa
 
 ### Command
 ```batch
-.\\python_standalone\\python.exe -s -B ComfyUI\\main.py --disable-xformers --disable-smart-memory %*
+.\python_standalone\python.exe -s -B ComfyUI\main.py --disable-xformers --disable-smart-memory %*
 ```
 
-Note: Use `.\\` prefix to explicitly reference current directory executables.
+Note: Use `.\` prefix to explicitly reference current directory executables.
 
 ### Flags Explained
 - `-s`: No site packages (isolated environment)
@@ -68,14 +68,14 @@ setlocal
 @REM Use this when you need the most accurate and stable results
 
 @REM Set PATH to include portable Git and Python scripts
-set PATH=%PATH%;%~dp0MinGit\\cmd;%~dp0python_standalone\\Scripts
+set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 
 @REM Set cache directories
 set HF_HUB_CACHE=%~dp0HuggingFaceHub
 set TORCH_HOME=%~dp0TorchHome
 set PYTHONPYCACHEPREFIX=%~dp0pycache
 
-.\\python_standalone\\python.exe -s -B ComfyUI\\main.py --disable-xformers --disable-smart-memory %*
+.\python_standalone\python.exe -s -B ComfyUI\main.py --disable-xformers --disable-smart-memory %*
 
 endlocal
 pause
@@ -91,10 +91,10 @@ Optimized launcher uses default settings with all performance optimizations enab
 
 ### Command
 ```batch
-.\\python_standalone\\python.exe -s -B ComfyUI\\main.py %*
+.\python_standalone\python.exe -s -B ComfyUI\main.py %*
 ```
 
-Note: Use `.\\` prefix to explicitly reference current directory executables.
+Note: Use `.\` prefix to explicitly reference current directory executables.
 
 ### Flags Explained
 - `-s`: No site packages (isolated environment)
@@ -128,14 +128,14 @@ setlocal
 @REM Best for interactive work and fast iterations
 
 @REM Set PATH to include portable Git and Python scripts
-set PATH=%PATH%;%~dp0MinGit\\cmd;%~dp0python_standalone\\Scripts
+set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 
 @REM Set cache directories
 set HF_HUB_CACHE=%~dp0HuggingFaceHub
 set TORCH_HOME=%~dp0TorchHome
 set PYTHONPYCACHEPREFIX=%~dp0pycache
 
-.\\python_standalone\\python.exe -s -B ComfyUI\\main.py %*
+.\python_standalone\python.exe -s -B ComfyUI\main.py %*
 
 endlocal
 pause
@@ -178,7 +178,8 @@ ComfyUI_Windows_portable/
 ├── ComfyUI/
 │   └── main.py
 ├── python_standalone/
-│   └── python.exe
+│   ├── python.exe
+│   └── Scripts/
 ├── MinGit/
 │   └── cmd/
 ├── HuggingFaceHub/
@@ -211,7 +212,7 @@ When testing launchers:
 
 ### Test Command
 ```batch
-python_standalone\\python.exe -s -B ComfyUI\\main.py --quick-test-for-ci --cpu
+python_standalone\python.exe -s -B ComfyUI\main.py --quick-test-for-ci --cpu
 ```
 
 ## Compatibility
@@ -231,13 +232,13 @@ python_standalone\\python.exe -s -B ComfyUI\\main.py --quick-test-for-ci --cpu
 ### Path Issues
 If MinGit not found:
 - Verify MinGit was extracted properly in the installation root
-- Check PATH setting uses `%~dp0MinGit\\cmd`
+- Check PATH setting uses `%~dp0MinGit\cmd`
 - Verify launcher was copied to installation root directory
 
 ### Python Not Found
 If python.exe not found:
 - Check python_standalone directory exists in installation root
-- Verify relative path `.\\python_standalone\\python.exe` is accessible
+- Verify relative path `.\python_standalone\python.exe` is accessible
 - Confirm launcher is in the installation root directory, not in ExtraScripts/
 
 ### Performance Issues

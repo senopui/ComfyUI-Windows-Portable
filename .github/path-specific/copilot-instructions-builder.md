@@ -30,7 +30,7 @@ Install in this order:
    - torchaudio (nightly cu130)
 
 2. **FlashAttention** (pak8.txt)
-   - Source: `https://github.com/mjun0812/flash-attention-prebuild-wheels`
+   - Source: `https://github.com/mjun0812/flash-attention-prebuilt-wheels`
    - Version: 2.8.3+cu130torch2.9 for cp313
    - Wheel: `flash_attn-2.8.3+cu130torch2.9-cp313-cp313-win_amd64.whl`
 
@@ -70,8 +70,8 @@ $pip_exe list
 4. pak5.txt - ComfyUI dependencies
 5. pak6.txt - Custom node dependencies (dlib, insightface, etc.)
 6. pak7.txt - Additional tools
-7. pak8.txt - Performance wheels (triton-windows, SageAttention, FlashAttention, Nunchaku)
-8. ComfyUI requirements.txt (from latest tag)
+7. pak8.txt - Performance wheels (triton-windows, SageAttention, FlashAttention, Nunchaku, SpargeAttention)
+8. ComfyUI requirements.txt (from master branch HEAD)
 9. pakY.txt - Final packages (Gooey for launcher)
 
 ## Stage 2: Repository Assembly (stage2.sh)
@@ -143,7 +143,7 @@ set -eux
 ### Compression Settings
 For 7z archives:
 ```bash
-"C:\\Program Files\\7-Zip\\7z.exe" a -t7z -m0=lzma2 -mx=7 -mfb=64 -md=128m -ms=on -mf=BCJ2 -v2140000000b
+"C:\Program Files\7-Zip\7z.exe" a -t7z -m0=lzma2 -mx=7 -mfb=64 -md=128m -ms=on -mf=BCJ2 -v2140000000b
 ```
 
 - Volume size: 2140000000 bytes (GitHub release limit)
