@@ -1,0 +1,144 @@
+#!/bin/bash
+set -eux
+
+# Chores
+workdir=$(pwd)
+pip_exe="${workdir}/python_standalone/python.exe -s -m pip"
+
+export PYTHONPYCACHEPREFIX="${workdir}/pycache1"
+export PIP_NO_WARN_SCRIPT_LOCATION=0
+
+ls -lahF
+
+# Download Python 3.13 Standalone
+echo "=== Downloading Python 3.13 standalone build ==="
+curl -sSL \
+https://github.com/astral-sh/python-build-standalone/releases/download/20251120/cpython-3.13.1+20251120-x86_64-pc-windows-msvc-install_only.tar.gz \
+    -o python.tar.gz
+tar -zxf python.tar.gz
+mv python python_standalone
+
+# PIP installs
+echo "=== Installing pip, wheel, setuptools ==="
+$pip_exe install --upgrade pip wheel setuptools
+
+echo "=== Installing pak2.txt (build tools) ==="
+$pip_exe install -r "$workdir"/pak2.txt
+
+# Install PyTorch nightly cu130 FIRST
+echo "=== Installing PyTorch nightly cu130 (torch, torchvision, torchaudio) ==="
+$pip_exe install -r "$workdir"/pak3.txt
+
+# Guarded install: flash-attn via AI-windows-whl
+echo "=== Attempting flash-attn from AI-windows-whl ==="
+$pip_exe install flash-attn --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn install failed (may not be available for cp313/torch-nightly)"
+
+# Guarded install: xformers via AI-windows-whl
+echo "=== Attempting xformers from AI-windows-whl ==="
+$pip_exe install xformers --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers install failed (may not be available for cp313/torch-nightly)"
+
+# Guarded install: sageattention via AI-windows-whl
+echo "=== Attempting sageattention from AI-windows-whl ==="
+$pip_exe install sageattention --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: sageattention install failed (may not be available for cp313/torch-nightly)"
+
+# Guarded install: triton-windows via AI-windows-whl
+echo "=== Attempting triton-windows from AI-windows-whl ==="
+$pip_exe install 'triton-windows<3.6' --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: triton-windows install failed (may not be available for cp313/torch-nightly)"
+
+# Guarded install: natten via whl.natten.org
+echo "=== Attempting natten from whl.natten.org ==="
+$pip_exe install natten -f https://whl.natten.org || echo "WARNING: natten install failed (may not be available for cp313/torch-nightly)"
+
+# Guarded install: nunchaku via AI-windows-whl
+echo "=== Attempting nunchaku from AI-windows-whl ==="
+$pip_exe install nunchaku --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: nunchaku install failed (may not be available for cp313/torch-nightly)"
+
+# Guarded install: spargeattention via AI-windows-whl
+echo "=== Attempting spargeattention from AI-windows-whl ==="
+$pip_exe install spargeattention --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: spargeattention install failed (may not be available for cp313/torch-nightly)"
+
+# Guarded install: bitsandbytes
+echo "=== Attempting bitsandbytes ==="
+$pip_exe install bitsandbytes || echo "WARNING: bitsandbytes install failed (may not be available for cp313/torch-nightly)"
+
+# temp-fix, TODO: remove after version chaos resolved
+echo "=== Installing transformers ==="
+$pip_exe install transformers
+
+echo "=== Installing pak4.txt ==="
+$pip_exe install -r "$workdir"/pak4.txt
+
+echo "=== Installing pak5.txt ==="
+$pip_exe install -r "$workdir"/pak5.txt
+
+echo "=== Installing pak6.txt ==="
+$pip_exe install -r "$workdir"/pak6.txt
+
+echo "=== Installing pak7.txt ==="
+$pip_exe install -r "$workdir"/pak7.txt
+
+# temp-fix: Prevent SAM-3 from installing its older dependencies
+echo "=== Installing SAM3 (no-deps) ==="
+$pip_exe install --no-deps 'git+https://github.com/facebookresearch/sam3.git'
+
+# Install packages from pak8.txt with clear logging
+echo "=== Installing pak8.txt (performance wheels - best effort) ==="
+while IFS= read -r line || [ -n "$line" ]; do
+    # Skip empty lines and comments
+    if [[ -z "$line" ]] || [[ "$line" =~ ^[[:space:]]*# ]]; then
+        continue
+    fi
+    echo ">>> Installing: $line"
+    $pip_exe install "$line" || echo "WARNING: Failed to install $line (may not be available for cp313/torch-nightly)"
+done < "$workdir"/pak8.txt
+
+# Install comfyui-frontend-package from ComfyUI master
+echo "=== Installing ComfyUI frontend requirements from master ==="
+$pip_exe install -r "https://github.com/comfyanonymous/ComfyUI/raw/refs/heads/master/requirements.txt" || echo "WARNING: ComfyUI frontend requirements install had issues"
+
+echo "=== Installing pakY.txt ==="
+$pip_exe install -r "$workdir"/pakY.txt
+
+echo "=== Installing pakZ.txt ==="
+$pip_exe install -r "$workdir"/pakZ.txt
+
+# Log Python/PyTorch/CUDA versions
+echo "=============================="
+echo "=== Version Summary ==="
+echo "=============================="
+echo "Python version:"
+"$workdir"/python_standalone/python.exe --version
+echo "---"
+echo "PyTorch version and CUDA availability:"
+"$workdir"/python_standalone/python.exe -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'CUDA version: {torch.version.cuda if torch.cuda.is_available() else \"N/A\"}')" || echo "WARNING: Could not query PyTorch/CUDA info"
+echo "=============================="
+
+$pip_exe list
+
+cd "$workdir"
+
+# Add Ninja binary (replacing PIP Ninja if exists)
+echo "=== Adding Ninja binary ==="
+curl -sSL https://github.com/ninja-build/ninja/releases/latest/download/ninja-win.zip \
+    -o ninja-win.zip
+unzip -q -o ninja-win.zip -d "$workdir"/python_standalone/Scripts
+rm ninja-win.zip
+
+# Add aria2 binary
+echo "=== Adding aria2 binary ==="
+curl -sSL https://github.com/aria2/aria2/releases/download/release-1.37.0/aria2-1.37.0-win-64bit-build1.zip \
+    -o aria2.zip
+unzip -q aria2.zip -d "$workdir"/aria2
+mv "$workdir"/aria2/*/aria2c.exe  "$workdir"/python_standalone/Scripts/
+rm aria2.zip
+
+# Add FFmpeg binary
+echo "=== Adding FFmpeg binary ==="
+curl -sSL https://github.com/GyanD/codexffmpeg/releases/download/8.0.1/ffmpeg-8.0.1-full_build.zip \
+    -o ffmpeg.zip
+unzip -q ffmpeg.zip -d "$workdir"/ffmpeg
+mv "$workdir"/ffmpeg/*/bin/ffmpeg.exe  "$workdir"/python_standalone/Scripts/
+rm ffmpeg.zip
+
+cd "$workdir"
+du -hd1
