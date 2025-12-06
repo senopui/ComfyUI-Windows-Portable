@@ -1,12 +1,11 @@
-# triton-windows version is paired with PyTorch
-# Ref: https://github.com/woct0rdho/triton-windows
-triton-windows<3.6
-
-# Nunchaku, paired with PyTorch
-https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2+torch2.9-cp312-cp312-win_amd64.whl
-
-# SageAttention
-https://github.com/woct0rdho/SageAttention/releases/download/v2.2.0-windows.post4/sageattention-2.2.0+cu128torch2.9.0andhigher.post4-cp39-abi3-win_amd64.whl
-
-# SpargeAttention
-https://github.com/woct0rdho/SpargeAttn/releases/download/v0.1.0-windows.post3/spas_sage_attn-0.1.0+cu128torch2.9.0.post3-cp39-abi3-win_amd64.whl
+# Performance wheels for cu130 are installed via guarded installs in stage1.sh
+# using the ai-windows-whl index for Python 3.13 + PyTorch nightly compatibility
+#
+# These include:
+# - triton-windows<3.6
+# - nunchaku
+# - sageattention  
+# - spargeattention
+#
+# Note: Specific wheel URLs for cp312/cu128 are not compatible with cp313/cu130 nightly
+# so we rely on the ai-windows-whl index to provide the correct versions.

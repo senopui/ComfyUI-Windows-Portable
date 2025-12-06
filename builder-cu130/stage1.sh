@@ -74,6 +74,18 @@ $pip_exe install -r "$workdir"/pak5.txt
 echo "=== Installing pak6.txt ==="
 $pip_exe install -r "$workdir"/pak6.txt
 
+# Guarded install: dlib (cp312 wheel may not work with Python 3.13)
+echo "=== Attempting dlib (best-effort for cp313) ==="
+$pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp312-cp312-win_amd64.whl || echo "WARNING: dlib install failed (likely cp312 wheel incompatible with cp313)"
+
+# Guarded install: insightface (cp312 wheel may not work with Python 3.13)
+echo "=== Attempting insightface (best-effort for cp313) ==="
+$pip_exe install https://github.com/Gourieff/Assets/raw/refs/heads/main/Insightface/insightface-0.7.3-cp312-cp312-win_amd64.whl || echo "WARNING: insightface install failed (likely cp312 wheel incompatible with cp313)"
+
+# Guarded install: cupy for CUDA 13.0 (try cuda13x first, fallback to cuda12x)
+echo "=== Attempting cupy-cuda13x (fallback to cuda12x if unavailable) ==="
+$pip_exe install cupy-cuda13x || $pip_exe install cupy-cuda12x || echo "WARNING: cupy install failed for both cuda13x and cuda12x"
+
 echo "=== Installing pak7.txt ==="
 $pip_exe install -r "$workdir"/pak7.txt
 

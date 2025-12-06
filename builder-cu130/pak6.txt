@@ -1,5 +1,5 @@
-https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp312-cp312-win_amd64.whl
-https://github.com/Gourieff/Assets/raw/refs/heads/main/Insightface/insightface-0.7.3-cp312-cp312-win_amd64.whl
+# NOTE: dlib and insightface cp312 wheels may not work with Python 3.13
+# Stage1.sh will attempt to install these with fallback handling
 pixeloe
 scikit-build-core
 git+https://github.com/rodjjo/filterpy.git
@@ -10,8 +10,7 @@ git+https://github.com/ltdrdata/img2texture.git
 git+https://github.com/facebookresearch/sam2.git
 # Janus' real dep list is in its pyproject.toml, not requirements.txt
 git+https://github.com/deepseek-ai/Janus.git
-# For Frame Interpolation
-cupy-cuda12x
+# For Frame Interpolation - Note: cupy-cuda13x may not exist yet, will be handled with fallback in stage1.sh
 # For smZNodes
 compel
 lark
