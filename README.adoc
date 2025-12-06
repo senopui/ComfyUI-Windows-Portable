@@ -203,7 +203,7 @@ The nightly builds include two specialized launcher scripts in the `ExtraScripts
 
 Nightly builds are available from the releases page with the tag `nightly-cu130`:
 
-* https://github.com/YanWenKun/ComfyUI-Windows-Portable/releases/tag/nightly-cu130[Nightly Build Releases]
+* https://github.com/senopui/ComfyUI-Windows-Portable/releases/tag/nightly-cu130[Nightly Build Releases]
 
 Look for files named: `ComfyUI_Windows_portable_cu130_nightly.7z.*`
 

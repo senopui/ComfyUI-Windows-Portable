@@ -137,11 +137,13 @@ def main():
     if args.hf_token:
         os.environ['HF_TOKEN'] = args.hf_token
 
-    # Set PIP mirror
-    os.environ['PIP_INDEX_URL'] = args.pip_index_url
+    # Set PIP mirror only if specified
+    if args.pip_index_url:
+        os.environ['PIP_INDEX_URL'] = args.pip_index_url
 
-    # Set HuggingFace mirror
-    os.environ['HF_ENDPOINT'] = args.hf_endpoint
+    # Set HuggingFace mirror only if specified
+    if args.hf_endpoint:
+        os.environ['HF_ENDPOINT'] = args.hf_endpoint
 
     # Set HuggingFace cache directory
     os.environ['HF_HUB_CACHE'] = os.path.join(os.getcwd(), 'HuggingFaceHub')

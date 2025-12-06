@@ -6,11 +6,11 @@
 # Ref: https://github.com/woct0rdho/triton-windows
 triton-windows<3.6
 
-# Nunchaku, paired with PyTorch 2.9 (may not work with nightly)
+# Nunchaku, paired with PyTorch 2.9 and Python 3.12 (expected to fail with Python 3.13 / PyTorch nightly)
 https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2+torch2.9-cp312-cp312-win_amd64.whl
 
-# SageAttention (cp39-abi3 should work with Python 3.13)
+# SageAttention (cp39-abi3 should work with Python 3.13; cu128 build used with cu130 via CUDA compatibility)
 https://github.com/woct0rdho/SageAttention/releases/download/v2.2.0-windows.post4/sageattention-2.2.0+cu128torch2.9.0andhigher.post4-cp39-abi3-win_amd64.whl
 
-# SpargeAttention (cp39-abi3 should work with Python 3.13)
+# SpargeAttention (cp39-abi3 should work with Python 3.13; cu128 build used with cu130 via CUDA compatibility)
 https://github.com/woct0rdho/SpargeAttn/releases/download/v0.1.0-windows.post3/spas_sage_attn-0.1.0+cu128torch2.9.0.post3-cp39-abi3-win_amd64.whl

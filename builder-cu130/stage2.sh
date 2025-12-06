@@ -29,7 +29,7 @@ rm MinGit.zip
 
 ################################################################################
 # ComfyUI main app - Use master branch for nightly builds
-git clone https://github.com/comfyanonymous/ComfyUI.git \
+$gcs https://github.com/comfyanonymous/ComfyUI.git \
     "$workdir"/ComfyUI_Windows_portable/ComfyUI
 # Use latest master branch (no tag reset for bleeding-edge nightly)
 cd "$workdir"/ComfyUI_Windows_portable/ComfyUI

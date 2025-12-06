@@ -1,5 +1,4 @@
 import os
-import re
 import sys
 import git
 from concurrent.futures import ThreadPoolExecutor

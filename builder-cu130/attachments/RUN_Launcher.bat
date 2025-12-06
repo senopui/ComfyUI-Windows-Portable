@@ -1,4 +1,5 @@
 setlocal
-set PYTHONPYCACHEPREFIX=%~dp0\pycache
+set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
+set PYTHONPYCACHEPREFIX=%~dp0pycache
 .\python_standalone\python.exe -s launcher.py
 endlocal
