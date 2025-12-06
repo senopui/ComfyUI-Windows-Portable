@@ -26,16 +26,16 @@ rem set HF_TOKEN=
 @REM The following content generally does not require user modification.
 
 @REM This command redirects HuggingFace-Hub to download model files in this folder.
-set HF_HUB_CACHE=%~dp0\HuggingFaceHub
+set HF_HUB_CACHE=%~dp0HuggingFaceHub
 
 @REM This command redirects Pytorch Hub to download model files in this folder.
-set TORCH_HOME=%~dp0\TorchHome
+set TORCH_HOME=%~dp0TorchHome
 
 @REM This command will set PATH environment variable.
 set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 
 @REM This command will let the .pyc files to be stored in one place.
-set PYTHONPYCACHEPREFIX=%~dp0\pycache
+set PYTHONPYCACHEPREFIX=%~dp0pycache
 
 @REM Maximum Fidelity Mode: Disable xformers and smart memory
 .\python_standalone\python.exe -s ComfyUI\main.py --windows-standalone-build --disable-xformers --disable-smart-memory %EXTRA_ARGS%
