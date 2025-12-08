@@ -173,10 +173,12 @@ def main():
         os.environ['HF_TOKEN'] = args.hf_token
 
     # 设置 PIP 镜像
-    os.environ['PIP_INDEX_URL'] = args.pip_index_url
+    if args.pip_index_url:
+        os.environ['PIP_INDEX_URL'] = args.pip_index_url
 
     # 设置 HuggingFace 镜像
-    os.environ['HF_ENDPOINT'] = args.hf_endpoint
+    if args.hf_endpoint:
+        os.environ['HF_ENDPOINT'] = args.hf_endpoint
 
     # 设置 HuggingFace 缓存目录
     os.environ['HF_HUB_CACHE'] = os.path.join(os.getcwd(), 'HuggingFaceHub')

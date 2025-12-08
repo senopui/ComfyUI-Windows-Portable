@@ -1,2 +1,2 @@
-# Ensure Numpy 1
-numpy==1.26.4
+# Numpy 1.26.4 is already pinned in pak4.txt (line 27) with explanation
+# No need to duplicate the pinning here

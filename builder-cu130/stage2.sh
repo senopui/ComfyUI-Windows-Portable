@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eux
+set -euo pipefail
 
 # Chores
 git config --global core.autocrlf true
@@ -31,7 +31,7 @@ rm MinGit.zip
 ################################################################################
 # ComfyUI main app - PULL FROM MASTER (NO TAG RESET)
 echo "=== Cloning ComfyUI from master ==="
-git clone https://github.com/comfyanonymous/ComfyUI.git \
+$gcs https://github.com/comfyanonymous/ComfyUI.git \
     "$workdir"/ComfyUI_Windows_portable/ComfyUI
 cd "$workdir"/ComfyUI_Windows_portable/ComfyUI
 # DO NOT reset to tag - use master as-is for nightly builds
