@@ -26,6 +26,8 @@ https://github.com/ltdrdata/ComfyUI-Impact-Pack[Impact Pack]
 
 * 仅预置了少量功能性模型，绘图模型还请用户自行下载
 
+* **新增：前沿每夜构建版** - CUDA 13.0 版本包含 Python 3.13、PyTorch nightly 以及 FlashAttention、SageAttention 等前沿优化。详见英文 README 的 Nightly Builds 章节
+
 * 使用 GitHub 流水线打包，方便 DIY。用户无需配置 CI/CD，只需在 GitHub 上 Fork 仓库，即可运行打包脚本 <<build-your-own, 【查看操作方法】>>
 
 ## 如何使用
