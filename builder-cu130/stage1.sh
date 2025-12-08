@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eux
+set -euo pipefail
 
 # Chores
 workdir=$(pwd)
@@ -12,9 +12,9 @@ ls -lahF
 
 # Download Python 3.13 Standalone - fetch latest 3.13.xx release
 echo "=== Fetching latest Python 3.13.xx standalone build ==="
-# Get the latest release and find the Python 3.13.xx download URL
+# Get the latest release (not pre-release) and find the Python 3.13.xx download URL
 latest_python_url=$(curl -sSL "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=10" | \
-    jq -r '.[].assets[] | select(.name | test("cpython-3\\.13\\.[0-9]+\\+[0-9]+-x86_64-pc-windows-msvc-install_only\\.tar\\.gz$")) | .browser_download_url' | \
+    jq -r '[.[] | select(.prerelease == false)][0].assets[] | select(.name | test("cpython-3\\.13\\.[0-9]+\\+[0-9]+-x86_64-pc-windows-msvc-install_only\\.tar\\.gz$")) | .browser_download_url' | \
     head -1)
 
 if [ -z "$latest_python_url" ]; then
