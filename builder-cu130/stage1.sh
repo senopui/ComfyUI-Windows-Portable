@@ -13,6 +13,10 @@ ls -lahF
 # Download Python 3.13 Standalone - fetch latest 3.13.xx release
 echo "=== Fetching latest Python 3.13.xx standalone build ==="
 # Get the latest release (not pre-release) and find the Python 3.13.xx download URL
+# 1. Fetch last 10 releases from python-build-standalone
+# 2. Filter out pre-releases (select .prerelease == false)
+# 3. Take the first (most recent) release
+# 4. From that release's assets, find the cpython-3.13.xx install_only tarball for Windows
 latest_python_url=$(curl -sSL "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=10" | \
     jq -r '[.[] | select(.prerelease == false)][0].assets[] | select(.name | test("cpython-3\\.13\\.[0-9]+\\+[0-9]+-x86_64-pc-windows-msvc-install_only\\.tar\\.gz$")) | .browser_download_url' | \
     head -1)

@@ -36,6 +36,7 @@ jobs:
             echo "=== Testing run_maximum_fidelity.bat launcher ==="
             cd ComfyUI_Windows_portable
             # Run launcher with --quick-test-for-ci --cpu, capture output
+            # Note: timeout command requires bash (available by default on GitHub Windows runners)
             timeout 300 bash -c './python_standalone/python.exe -s -B ComfyUI/main.py --disable-xformers --disable-smart-memory --quick-test-for-ci --cpu 2>&1 | tee max_fidelity_test.log' || true
             # Check for Traceback in log
             if grep -i "Traceback" max_fidelity_test.log; then
