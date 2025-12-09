@@ -28,6 +28,34 @@ jobs:
           working-directory: builder-cu130
           run: bash stage3.sh
 
+        - name: Validate Launchers (CPU mode)
+          shell: bash
+          working-directory: builder-cu130
+          run: |
+            set -euo pipefail
+            echo "=== Testing run_maximum_fidelity.bat launcher ==="
+            cd ComfyUI_Windows_portable
+            # Run launcher with --quick-test-for-ci --cpu, capture output
+            timeout 300 bash -c './python_standalone/python.exe -s -B ComfyUI/main.py --disable-xformers --disable-smart-memory --quick-test-for-ci --cpu 2>&1 | tee max_fidelity_test.log' || true
+            # Check for Traceback in log
+            if grep -i "Traceback" max_fidelity_test.log; then
+              echo "ERROR: run_maximum_fidelity launcher test failed with Traceback"
+              cat max_fidelity_test.log
+              exit 1
+            fi
+            echo "✓ run_maximum_fidelity launcher test passed"
+            
+            echo "=== Testing run_optimized_fidelity.bat launcher ==="
+            # Run launcher with --quick-test-for-ci --cpu, capture output
+            timeout 300 bash -c './python_standalone/python.exe -s -B ComfyUI/main.py --quick-test-for-ci --cpu 2>&1 | tee optimized_fidelity_test.log' || true
+            # Check for Traceback in log
+            if grep -i "Traceback" optimized_fidelity_test.log; then
+              echo "ERROR: run_optimized_fidelity launcher test failed with Traceback"
+              cat optimized_fidelity_test.log
+              exit 1
+            fi
+            echo "✓ run_optimized_fidelity launcher test passed"
+
         - name: Upload archive to release
           uses: xresloader/upload-to-github-release@v1
           env:
