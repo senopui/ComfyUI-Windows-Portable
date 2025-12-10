@@ -84,7 +84,7 @@ image::docs/screenshot-launcher.webp["Launcher Screenshot"]
 ** *For Nightly Build (cu130)*: Two specialized launcher scripts are available:
 *** `run_maximum_fidelity.bat`: Prioritizes quality and stability (disables xformers and smart memory)
 *** `run_optimized_fidelity.bat`: Balances quality with performance (enables all optimizations)
-** Both launchers maintain compatibility with `character_select_stand_alone_app_test` (default port 8188) 
+** Both launchers maintain compatibility with `character_select_stand_alone_app_test` (default port 8188)
 
 . Take full advantage of ComfyUI-Manager (the *Manager* button in the top-right corner of the ComfyUI page) to manage custom nodes: install, update, disable, and uninstall.
 ** Be cautious when using "Update All"; there's no need to update unused nodes to avoid Python package conflicts.

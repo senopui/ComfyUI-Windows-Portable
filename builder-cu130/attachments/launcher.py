@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import subprocess
+import shlex
 from gooey import Gooey, GooeyParser
 
 # Code mostly written by DeepSeek, Gemini and ChatGPT
@@ -179,7 +180,6 @@ def main():
 
     # Add user-defined extra parameters
     if args.extra_args:
-        import shlex
         extra_args = shlex.split(args.extra_args)
         command.extend(extra_args)
 

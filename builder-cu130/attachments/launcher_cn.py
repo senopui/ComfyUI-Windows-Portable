@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import subprocess
+import shlex
 from gooey import Gooey, GooeyParser
 
 # 代码主要是 DeepSeek、Gemini、ChatGPT 写的
@@ -219,7 +220,6 @@ def main():
     # 添加用户自定义的额外参数
     if args.extra_args:
         # 使用 shlex.split 来正确处理带空格的参数
-        import shlex
         extra_args = shlex.split(args.extra_args)  # 使用 shlex.split 解析参数
         command.extend(extra_args)
 
