@@ -2,7 +2,7 @@
 # You need to install Git for Windows and select Git Bash (Default)
 # https://git-scm.com/download/win
 
-set -eu
+set -euo pipefail
 
 # If you don't want a FORCE update, remove "git reset" line
 function git_pull () {
