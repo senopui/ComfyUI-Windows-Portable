@@ -5,7 +5,7 @@ setlocal
 @REM - Enables xformers for optimized attention (when available)
 @REM - Enables smart memory management
 @REM - FlashAttention used when available (faster and still high quality)
-@REM - Auto-precision optimization enabled (fp16/bf16 as appropriate)
+@REM - Uses ComfyUI's default precision settings
 @REM - Default port 8188 (compatible with character_select_stand_alone_app_test)
 
 @REM If you don't want the browser to open automatically, add [ --disable-auto-launch ] after the last argument.

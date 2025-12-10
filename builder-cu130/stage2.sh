@@ -129,7 +129,7 @@ du -hd2 "$workdir"/ComfyUI_Windows_portable
 
 ################################################################################
 # TAESD model for image on-the-fly preview
-echo "=== Downloading TAESD decoders ==="
+echo "=== Downloading TAESD decoder ==="
 cd "$workdir"
 $gcs https://github.com/madebyollin/taesd.git
 mkdir -p "$workdir"/ComfyUI_Windows_portable/ComfyUI/models/vae_approx
