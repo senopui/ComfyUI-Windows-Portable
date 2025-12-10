@@ -28,6 +28,35 @@ jobs:
           working-directory: builder-cu128
           run: bash stage3.sh
 
+        - name: Validate Launchers (CPU mode)
+          shell: bash
+          working-directory: builder-cu128
+          run: |
+            set -euo pipefail
+            echo "=== Testing run_nvidia_gpu.bat launcher ==="
+            cd ComfyUI_Windows_portable
+            # Run launcher with --quick-test-for-ci --cpu, capture output
+            # Note: timeout command requires bash (available by default on GitHub Windows runners)
+            timeout 300 bash -c './python_standalone/python.exe -s -B ComfyUI/main.py --quick-test-for-ci --cpu 2>&1 | tee nvidia_gpu_test.log' || true
+            # Check for Traceback in log
+            if grep -i "Traceback" nvidia_gpu_test.log; then
+              echo "ERROR: run_nvidia_gpu launcher test failed with Traceback"
+              cat nvidia_gpu_test.log
+              exit 1
+            fi
+            echo "✓ run_nvidia_gpu launcher test passed"
+            
+            echo "=== Testing run_cpu.bat launcher ==="
+            # Run launcher with --quick-test-for-ci --cpu, capture output
+            timeout 300 bash -c './python_standalone/python.exe -s -B ComfyUI/main.py --cpu --quick-test-for-ci 2>&1 | tee cpu_test.log' || true
+            # Check for Traceback in log
+            if grep -i "Traceback" cpu_test.log; then
+              echo "ERROR: run_cpu launcher test failed with Traceback"
+              cat cpu_test.log
+              exit 1
+            fi
+            echo "✓ run_cpu launcher test passed"
+
         - name: Upload archive to release
           uses: xresloader/upload-to-github-release@v1
           env:
