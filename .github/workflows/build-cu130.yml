@@ -1,4 +1,4 @@
-name: "Build & Upload CUDA 12.8 Package"
+name: "Build & Upload CUDA 13.0 Nightly Package"
 
 on:
   workflow_dispatch:
@@ -15,47 +15,47 @@ jobs:
 
         - name: Stage 1 Gathering Dependencies
           shell: bash
-          working-directory: builder-cu128
+          working-directory: builder-cu130
           run: bash stage1.sh
 
         - name: Stage 2 Assembling Repositories
           shell: bash
-          working-directory: builder-cu128
+          working-directory: builder-cu130
           run: bash stage2.sh
 
         - name: Stage 3 Compressing Package
           shell: bash
-          working-directory: builder-cu128
+          working-directory: builder-cu130
           run: bash stage3.sh
 
         - name: Validate Launchers (CPU mode)
           shell: bash
-          working-directory: builder-cu128
+          working-directory: builder-cu130
           run: |
             set -euo pipefail
-            echo "=== Testing run_nvidia_gpu.bat launcher ==="
+            echo "=== Testing run_maximum_fidelity.bat launcher ==="
             cd ComfyUI_Windows_portable
             # Run launcher with --quick-test-for-ci --cpu, capture output
             # Note: timeout command requires bash (available by default on GitHub Windows runners)
-            timeout 300 bash -c './python_standalone/python.exe -s -B ComfyUI/main.py --quick-test-for-ci --cpu 2>&1 | tee nvidia_gpu_test.log' || true
+            timeout 300 bash -c './python_standalone/python.exe -s -B ComfyUI/main.py --disable-xformers --disable-smart-memory --quick-test-for-ci --cpu 2>&1 | tee max_fidelity_test.log' || true
             # Check for Traceback in log
-            if grep -i "Traceback" nvidia_gpu_test.log; then
-              echo "ERROR: run_nvidia_gpu launcher test failed with Traceback"
-              cat nvidia_gpu_test.log
+            if grep -i "Traceback" max_fidelity_test.log; then
+              echo "ERROR: run_maximum_fidelity launcher test failed with Traceback"
+              cat max_fidelity_test.log
               exit 1
             fi
-            echo "✓ run_nvidia_gpu launcher test passed"
+            echo "✓ run_maximum_fidelity launcher test passed"
             
-            echo "=== Testing run_cpu.bat launcher ==="
+            echo "=== Testing run_optimized_fidelity.bat launcher ==="
             # Run launcher with --quick-test-for-ci --cpu, capture output
-            timeout 300 bash -c './python_standalone/python.exe -s -B ComfyUI/main.py --cpu --quick-test-for-ci 2>&1 | tee cpu_test.log' || true
+            timeout 300 bash -c './python_standalone/python.exe -s -B ComfyUI/main.py --quick-test-for-ci --cpu 2>&1 | tee optimized_fidelity_test.log' || true
             # Check for Traceback in log
-            if grep -i "Traceback" cpu_test.log; then
-              echo "ERROR: run_cpu launcher test failed with Traceback"
-              cat cpu_test.log
+            if grep -i "Traceback" optimized_fidelity_test.log; then
+              echo "ERROR: run_optimized_fidelity launcher test failed with Traceback"
+              cat optimized_fidelity_test.log
               exit 1
             fi
-            echo "✓ run_cpu launcher test passed"
+            echo "✓ run_optimized_fidelity launcher test passed"
 
         - name: Upload archive to release
           uses: xresloader/upload-to-github-release@v1
@@ -64,7 +64,7 @@ jobs:
             # You don't need to configure it
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           with:
-            file: "builder-cu128/*.7z*;builder-cu128/*.zip*"
+            file: "builder-cu130/*.7z*;builder-cu130/*.zip*"
             # Always draft before release
             draft: true
             overwrite: true
