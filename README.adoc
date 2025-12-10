@@ -88,10 +88,6 @@ image::docs/screenshot-launcher.webp["Launcher Screenshot"]
 *** `run_optimized_fidelity.bat`: Balances quality with performance (enables all optimizations)
 ** Both launchers maintain compatibility with `character_select_stand_alone_app_test` (default port 8188)
 
-** *New in Nightly Builds:* Two additional launcher scripts are available:
-*** `run_maximum_fidelity.bat` - Disables xformers and smart memory optimizations for maximum image quality. Use when you need the highest possible fidelity and don't mind slower performance.
-*** `run_optimized_fidelity.bat` - Enables all bleeding-edge optimizations including auto precision, xformers/FlashAttention, and SageAttention. Best for balanced performance and quality.
-
 . Take full advantage of ComfyUI-Manager (the *Manager* button in the top-right corner of the ComfyUI page) to manage custom nodes: install, update, disable, and uninstall.
 ** Be cautious when using "Update All"; there's no need to update unused nodes to avoid Python package conflicts.
 
