@@ -1,0 +1,11 @@
+# Performance wheels for cu130 are installed via guarded installs in stage1.sh
+# using the ai-windows-whl index for Python 3.13 + PyTorch nightly compatibility
+#
+# These include:
+# - triton-windows<3.6
+# - nunchaku
+# - sageattention
+# - spargeattention
+#
+# Note: Specific wheel URLs for cp312/cu128 are not compatible with cp313/cu130 nightly
+# so we rely on the ai-windows-whl index to provide the correct versions.
