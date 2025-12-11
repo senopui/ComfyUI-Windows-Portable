@@ -19,7 +19,7 @@ Look for files named: `ComfyUI_Windows_portable_cu130_nightly.7z.*`
 **File:** `ExtraScripts/run_maximum_fidelity.bat`
 
 ```
-Flags: --disable-xformers --disable-smart-memory
+Flags: --disable-xformers --disable-smart-memory --disable-flash-attention
 Use for: Production renders, quality-critical work
 Trade-off: Slower, but maximum precision
 ```
@@ -28,7 +28,7 @@ Trade-off: Slower, but maximum precision
 **File:** `ExtraScripts/run_optimized_fidelity.bat`
 
 ```
-Flags: (no additional flags - uses ComfyUI defaults)
+Flags: (none - uses default optimizations)
 Use for: Interactive workflows, general use
 Trade-off: Faster, optimized performance
 ```

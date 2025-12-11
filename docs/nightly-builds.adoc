@@ -41,6 +41,7 @@ Optimized for maximum image quality and consistency.
 ----
 --disable-xformers
 --disable-smart-memory
+--disable-flash-attention
 ----
 
 **Use Cases:**
@@ -60,7 +61,7 @@ Balanced performance and quality with all bleeding-edge optimizations enabled.
 
 **Flags:**
 ----
-(no additional flags - uses ComfyUI defaults)
+(none - uses default optimizations)
 ----
 
 **Features:**

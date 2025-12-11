@@ -16,8 +16,8 @@ git -C "ComfyUI_Windows_portable/ComfyUI" checkout "models"
 
 "C:\Program Files\7-Zip\7z.exe" a -t7z -m0=lzma2 -mx=5 -mfb=32 -md=16m -ms=on -mf=BCJ2 -v2140000000b ComfyUI_Windows_portable_cu130_nightly.7z ComfyUI_Windows_portable
 
-# In case you need faster compression, comment the line above, and uncomment the line below. 
-# "C:\Program Files\7-Zip\7z.exe" a -tzip -v2140000000b ComfyUI_Windows_portable_cu130_nightly.zip ComfyUI_Windows_portable
+# In case you need faster compression, comment the line above, and uncomment the line below.
+# "C:\Program Files\7-Zip\7z.exe" a -tzip -v2140000000b ComfyUI_Windows_portable_cu130.zip ComfyUI_Windows_portable
 
 cd m_folder
 "C:\Program Files\7-Zip\7z.exe" a -tzip -v2140000000b models.zip ComfyUI_Windows_portable
