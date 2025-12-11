@@ -44,9 +44,9 @@ jobs:
           shell: bash  # bash is available on Windows runners and provides timeout command
           working-directory: builder-cu130/ComfyUI_Windows_portable
           run: |
-            echo "Testing optimized fidelity mode (auto precision enabled)..."
+            echo "Testing optimized fidelity mode (default launcher arguments)..."
             # timeout command (from bash) limits test duration to 120 seconds
-            timeout 120 ./python_standalone/python.exe -s ComfyUI/main.py --cpu --windows-standalone-build --auto-precision --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log || true
+            timeout 120 ./python_standalone/python.exe -s ComfyUI/main.py --cpu --windows-standalone-build --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log || true
             if grep -q "Traceback" optimized_fidelity_test.log; then
               echo "ERROR: Traceback detected in optimized fidelity launcher test!"
               cat optimized_fidelity_test.log

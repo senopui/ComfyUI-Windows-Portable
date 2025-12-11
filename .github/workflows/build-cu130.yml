@@ -1,4 +1,4 @@
-name: "Build & Upload CUDA 13.0 Nightly Package"
+name: "Build & Upload CUDA 13.0 Package (Manual)"
 
 on:
   workflow_dispatch:

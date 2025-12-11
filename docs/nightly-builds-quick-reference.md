@@ -28,9 +28,9 @@ Trade-off: Slower, but maximum precision
 **File:** `ExtraScripts/run_optimized_fidelity.bat`
 
 ```
-Flags: --auto-precision
+Flags: (no additional flags - uses ComfyUI defaults)
 Use for: Interactive workflows, general use
-Trade-off: Faster, slight precision differences
+Trade-off: Faster, optimized performance
 ```
 
 ## Key Differences from Stable Builds

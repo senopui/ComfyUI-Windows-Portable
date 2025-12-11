@@ -4,7 +4,7 @@ setlocal
 @REM Maximum Fidelity Mode - Favors quality and stability over speed
 @REM - Disables xformers (uses PyTorch's native attention for maximum compatibility)
 @REM - Disables smart memory management (more conservative memory handling)
-@REM - FlashAttention is still used when available (more stable than xformers)
+@REM - Uses PyTorch's native attention mechanisms for maximum precision
 @REM - Default port 8188 (compatible with character_select_stand_alone_app_test)
 
 @REM If you don't want the browser to open automatically, add [ --disable-auto-launch ] after the last argument.
