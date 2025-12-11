@@ -23,11 +23,6 @@ jobs:
           working-directory: builder-cu128
           run: bash stage2.sh
 
-        - name: Stage 3 Compressing Package
-          shell: bash
-          working-directory: builder-cu128
-          run: bash stage3.sh
-
         - name: Validate Launchers (CPU mode)
           shell: bash
           working-directory: builder-cu128
@@ -56,6 +51,11 @@ jobs:
               exit 1
             fi
             echo "✓ run_cpu launcher test passed"
+
+        - name: Stage 3 Compressing Package
+          shell: bash
+          working-directory: builder-cu128
+          run: bash stage3.sh
 
         - name: Upload archive to release
           uses: xresloader/upload-to-github-release@v1

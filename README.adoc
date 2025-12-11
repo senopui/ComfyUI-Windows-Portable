@@ -39,7 +39,7 @@ This repository provides two build variants:
 ** Recommended for most users
 
 * *Nightly Build (CUDA 13.0)*: Bleeding-edge with latest features
-** Package name: `ComfyUI_Windows_portable_cu130.7z.*`
+** Package name: `ComfyUI_Windows_portable_cu130_nightly.7z.*`
 ** Uses Python 3.13 + PyTorch 2.10+ nightly with CUDA 13.0
 ** Includes performance optimizations: FlashAttention, xformers, SageAttention, NATTEN, etc.
 ** Recommended for users who want the latest features and performance improvements
@@ -55,8 +55,8 @@ https://github.com/senopui/ComfyUI-Windows-Portable/releases[release page].
 *** https://github.com/senopui/ComfyUI-Windows-Portable/releases/latest/download/ComfyUI_Windows_portable_cu128.7z.001[ComfyUI_Windows_portable_cu128.7z.001]
 *** https://github.com/senopui/ComfyUI-Windows-Portable/releases/latest/download/ComfyUI_Windows_portable_cu128.7z.002[ComfyUI_Windows_portable_cu128.7z.002]
 ** For Nightly Build (CUDA 13.0):
-*** https://github.com/senopui/ComfyUI-Windows-Portable/releases/latest/download/ComfyUI_Windows_portable_cu130.7z.001[ComfyUI_Windows_portable_cu130.7z.001]
-*** https://github.com/senopui/ComfyUI-Windows-Portable/releases/latest/download/ComfyUI_Windows_portable_cu130.7z.002[ComfyUI_Windows_portable_cu130.7z.002]
+*** https://github.com/senopui/ComfyUI-Windows-Portable/releases/download/nightly-cu130/ComfyUI_Windows_portable_cu130_nightly.7z.001[ComfyUI_Windows_portable_cu130_nightly.7z.001]
+*** https://github.com/senopui/ComfyUI-Windows-Portable/releases/download/nightly-cu130/ComfyUI_Windows_portable_cu130_nightly.7z.002[ComfyUI_Windows_portable_cu130_nightly.7z.002]
 ** Models (shared between builds):
 *** https://github.com/senopui/ComfyUI-Windows-Portable/releases/latest/download/models.zip.001[models.zip.001] (If you are upgrading from a previous release, you don't need this file.)
 
