@@ -30,7 +30,7 @@ Trade-off: Slower, but maximum precision
 ```
 Flags: (none - uses default optimizations)
 Use for: Interactive workflows, general use
-Trade-off: Faster, slight precision differences
+Trade-off: Faster, optimized performance
 ```
 
 ## Key Differences from Stable Builds

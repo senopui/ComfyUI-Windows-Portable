@@ -67,7 +67,6 @@ Balanced performance and quality with all bleeding-edge optimizations enabled.
 **Features:**
 * Automatically uses xformers/FlashAttention when available
 * Smart memory management enabled
-* Auto-precision for optimal speed
 * SageAttention integration when available
 
 **Use Cases:**
