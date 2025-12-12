@@ -1,5 +1,11 @@
-@echo on
+@echo off
 setlocal
+
+@REM Optimized High Fidelity Mode - Balances quality with performance
+@REM - Enables xformers for optimized attention (when available)
+@REM - Enables smart memory management
+@REM - FlashAttention used when available (faster and still high quality)
+@REM - Default port 8188 (compatible with character_select_stand_alone_app_test)
 
 @REM If you don't want the browser to open automatically, add [ --disable-auto-launch ] after the last argument.
 set "EXTRA_ARGS=--disable-auto-launch"
@@ -20,10 +26,10 @@ rem set HF_TOKEN=
 @REM The following content generally does not require user modification.
 
 @REM This command redirects HuggingFace-Hub to download model files in this folder.
-set HF_HUB_CACHE=%~dp0\HuggingFaceHub
+set HF_HUB_CACHE=%~dp0HuggingFaceHub
 
 @REM This command redirects Pytorch Hub to download model files in this folder.
-set TORCH_HOME=%~dp0\TorchHome
+set TORCH_HOME=%~dp0TorchHome
 
 @REM This command will set PATH environment variable.
 set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
