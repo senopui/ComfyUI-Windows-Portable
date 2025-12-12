@@ -147,17 +147,17 @@ def main():
     attn_tab.add_argument('--use_pytorch_cross_attention', 
                             metavar='禁用 xFormers/FlashAttention/SageAttention', 
                             action='store_true',
-                            help='使用 PyTorch 原生交叉注意力实现， 图像生成更稳定（不是更好）。 不适合视频生成 (--use_pytorch_cross_attention)',
+                            help='使用 PyTorch 原生交叉注意力实现， 图像生成更稳定（不是更好）。 不适合视频生成 (--use-pytorch-cross-attention)',
                             default=saved_config.get("use_pytorch_cross_attention", False) if saved_config else False)
     attn_tab.add_argument('--use_sage_attention',
                             metavar='使用 SageAttention',
                             action='store_true',
-                            help='性能更佳， 但可能有兼容性问题 (--use_sage_attention)',
+                            help='性能更佳， 但可能有兼容性问题 (--use-sage-attention)',
                             default=saved_config.get("use_sage_attention", False) if saved_config else False)
     attn_tab.add_argument('--use_flash_attention',
                             metavar='使用 FlashAttention',
                             action='store_true',
-                            help='理论上与 xFormers 相当 (--use_flash_attention)',
+                            help='理论上与 xFormers 相当 (--use-flash-attention)',
                             default=saved_config.get("use_flash_attention", False) if saved_config else False)
     
     args = parser.parse_args()

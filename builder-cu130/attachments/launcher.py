@@ -112,17 +112,17 @@ def main():
     attn_tab.add_argument('--use_pytorch_cross_attention', 
                                  metavar='Disable xFormers/FlashAttention/SageAttention', 
                                  action='store_true',
-                                 help='Use native PyTorch cross-attention. More stable (not better) image generation. Not recommended for videos (--use_pytorch_cross_attention)',
+                                 help='Use native PyTorch cross-attention. More stable (not better) image generation. Not recommended for videos (--use-pytorch-cross-attention)',
                                  default=saved_config.get("use_pytorch_cross_attention", False) if saved_config else False)
     attn_tab.add_argument('--use_sage_attention',
                                  metavar='Use SageAttention',
                                  action='store_true',
-                                 help='Better performance but less compatibility (--use_sage_attention)',
+                                 help='Better performance but less compatibility (--use-sage-attention)',
                                  default=saved_config.get("use_sage_attention", False) if saved_config else False)
     attn_tab.add_argument('--use_flash_attention',
                                  metavar='Use FlashAttention',
                                  action='store_true',
-                                 help='On par with xFormers (--use_flash_attention)',
+                                 help='On par with xFormers (--use-flash-attention)',
                                  default=saved_config.get("use_flash_attention", False) if saved_config else False)
     
     args = parser.parse_args()
