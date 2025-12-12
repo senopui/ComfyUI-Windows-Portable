@@ -43,13 +43,22 @@ $pip_exe install -r "$workdir"/pak2.txt
 echo "=== Installing PyTorch nightly cu130 (torch, torchvision, torchaudio) ==="
 $pip_exe install -r "$workdir"/pak3.txt
 
+# Verify torch is installed and importable before installing performance wheels
+echo "=== Verifying PyTorch installation ==="
+"$workdir"/python_standalone/python.exe -c "import torch; print(f'PyTorch {torch.__version__} installed successfully')" || {
+    echo "ERROR: PyTorch not importable after installation"
+    exit 1
+}
+
 # Guarded install: flash-attn via AI-windows-whl
+# flash-attn requires torch to be installed first (imports torch during build)
 echo "=== Attempting flash-attn from AI-windows-whl ==="
 $pip_exe install flash-attn --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn install failed (may not be available for cp313/torch-nightly)"
 
 # Guarded install: xformers via AI-windows-whl
+# Use --no-deps to prevent xformers from downgrading torch nightly to stable version
 echo "=== Attempting xformers from AI-windows-whl ==="
-$pip_exe install xformers --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers install failed (may not be available for cp313/torch-nightly)"
+$pip_exe install xformers --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers install failed (may not be available for cp313/torch-nightly)"
 
 # Guarded install: sageattention via AI-windows-whl
 echo "=== Attempting sageattention from AI-windows-whl ==="
