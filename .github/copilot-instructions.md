@@ -16,14 +16,14 @@
 ## Build/packaging notes
 - Nightly: torch/vision/audio from https://download.pytorch.org/whl/nightly/cu130; perf wheels from https://ai-windows-whl.github.io/whl/; natten via https://whl.natten.org. Guard missing wheels and log warnings, don't hard-fail.
 - Stages: deps → assembly → packaging. Archives named ComfyUI_Windows_portable_cu130*.7z for nightly.
-- Validate launchers with `--cpu --quick-test-for-ci`; fail on Traceback.
+- Validate launchers with `--quick-test-for-ci --cpu`; fail on Traceback.
 - Python version: 3.13 from python-build-standalone for nightly builds.
 - 7z compression: volume splits at 2140000000 bytes (GitHub release limit).
 
 ## Build stages (builder directory)
 ### Stage 1: Python Environment Setup (stage1.sh)
 - Python 3.13 from python-build-standalone (nightly builds)
-- Package installation order: pak2.txt → pak3.txt (PyTorch cu130) → pak4.txt → pak5.txt → pak6.txt → pak7.txt → pak8.txt (perf wheels) → ComfyUI requirements.txt → pakY.txt
+- Package installation order: pak2.txt → pak3.txt (PyTorch cu130) → pak4.txt → pak5.txt → pak6.txt → pak7.txt → pak8.txt (perf wheels) → ComfyUI requirements.txt → pakY.txt → pakZ.txt
 - Performance wheels: flash-attn, xformers, sageattention+triton-windows, natten, nunchaku, spargeattention (best-effort)
 - Log package versions with `pip list` for debugging
 
