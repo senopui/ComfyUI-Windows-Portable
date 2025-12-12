@@ -1,4 +1,4 @@
 setlocal
-set PYTHONPYCACHEPREFIX=%~dp0\pycache
+set PYTHONPYCACHEPREFIX=%~dp0pycache
 .\python_standalone\python.exe -s launcher.py
 endlocal
