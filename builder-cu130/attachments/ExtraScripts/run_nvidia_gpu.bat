@@ -31,7 +31,7 @@ set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 @REM This command will let the .pyc files to be stored in one place.
 set PYTHONPYCACHEPREFIX=%~dp0pycache
 
-.\python_standalone\python.exe -s ComfyUI\main.py --windows-standalone-build %EXTRA_ARGS%
+.\python_standalone\python.exe -s -B ComfyUI\main.py --windows-standalone-build %EXTRA_ARGS%
 
 endlocal
 pause

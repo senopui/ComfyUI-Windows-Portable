@@ -43,13 +43,34 @@ $pip_exe install -r "$workdir"/pak2.txt
 echo "=== Installing PyTorch nightly cu130 (torch, torchvision, torchaudio) ==="
 $pip_exe install -r "$workdir"/pak3.txt
 
+# Verify torch is installed and importable before installing performance wheels
+echo "=== Verifying PyTorch installation ==="
+"$workdir"/python_standalone/python.exe -c "import torch; print(f'PyTorch {torch.__version__} installed successfully')" || {
+    echo "ERROR: PyTorch not importable after installation"
+    exit 1
+}
+
 # Guarded install: flash-attn via AI-windows-whl
+# flash-attn requires torch to be installed first (imports torch during build)
 echo "=== Attempting flash-attn from AI-windows-whl ==="
 $pip_exe install flash-attn --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn install failed (may not be available for cp313/torch-nightly)"
 
 # Guarded install: xformers via AI-windows-whl
+# Install xformers normally first to get all dependencies, then check if torch was downgraded
 echo "=== Attempting xformers from AI-windows-whl ==="
 $pip_exe install xformers --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers install failed (may not be available for cp313/torch-nightly)"
+
+# Verify torch nightly is still installed after xformers (not downgraded)
+echo "=== Verifying PyTorch version after xformers install ==="
+"$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'torch was downgraded to {torch.__version__}'; print(f'PyTorch {torch.__version__} verified')" || {
+    echo "WARNING: PyTorch version check failed, reinstalling PyTorch nightly"
+    $pip_exe install --force-reinstall --no-deps -r "$workdir"/pak3.txt
+    # Verify recovery reinstall succeeded
+    "$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'torch recovery reinstall failed, got {torch.__version__}'; print(f'PyTorch {torch.__version__} recovery verified')" || {
+        echo "ERROR: PyTorch recovery reinstall failed, aborting build"
+        exit 1
+    }
+}
 
 # Guarded install: sageattention via AI-windows-whl
 echo "=== Attempting sageattention from AI-windows-whl ==="
@@ -130,13 +151,23 @@ $pip_exe install -r "$workdir"/pakZ.txt
 
 # Log Python/PyTorch/CUDA versions
 echo "=============================="
-echo "=== Version Summary ==="
+echo "=== Final Version Summary ==="
 echo "=============================="
 echo "Python version:"
 "$workdir"/python_standalone/python.exe --version
 echo "---"
 echo "PyTorch version and CUDA availability:"
 "$workdir"/python_standalone/python.exe -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'CUDA version: {torch.version.cuda if torch.cuda.is_available() else \"N/A\"}')" || echo "WARNING: Could not query PyTorch/CUDA info"
+echo "---"
+echo "Checking numpy and opencv versions:"
+"$workdir"/python_standalone/python.exe -c "import numpy, cv2; print(f'numpy: {numpy.__version__}'); print(f'opencv: {cv2.__version__}')" || echo "WARNING: Could not query numpy/opencv versions"
+echo "---"
+echo "Verifying final torch version is cu130 nightly:"
+"$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'ERROR: torch is {torch.__version__}, expected cu130 nightly'; print('✓ PyTorch cu130 nightly verified')" || {
+    echo "ERROR: Final torch version verification failed!"
+    echo "This build requires PyTorch nightly cu130 but found a different version."
+    exit 1
+}
 echo "=============================="
 
 $pip_exe list

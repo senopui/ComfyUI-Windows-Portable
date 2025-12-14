@@ -1,0 +1,288 @@
+= Nightly Builds Documentation
+:toc:
+:toclevels: 3
+
+== Overview
+
+The nightly build workflow provides bleeding-edge versions of ComfyUI with the latest Python, PyTorch, CUDA, and optimization libraries. These builds are intended for users who want to test the latest features and optimizations before they make it into stable releases.
+
+== What's Included
+
+=== Core Components
+
+* **Python 3.13** - Latest Python interpreter with performance improvements
+* **PyTorch Nightly** (2.10+) - Bleeding-edge PyTorch from the nightly channel
+* **CUDA 13.0** - Latest CUDA toolkit for improved GPU performance
+* **ComfyUI Master** - Latest code from the master branch (no version pinning)
+
+=== Advanced Optimization Libraries
+
+The nightly builds include cutting-edge performance optimization libraries from the AI-windows-whl repository:
+
+* **xformers** - Latest version with memory-efficient attention mechanisms
+* **FlashAttention** - Highly optimized attention implementation (when available)
+* **SageAttention** - Advanced attention mechanism with Triton optimizations
+* **triton-windows** - Windows-compatible Triton compiler for custom kernels
+* **NATTEN** - Neighborhood attention for improved quality in certain workloads
+
+== Build Schedule
+
+Nightly builds run automatically at 02:00 UTC daily via GitHub Actions. They can also be triggered manually through the GitHub Actions interface.
+
+== Launcher Scripts
+
+Two specialized launcher scripts are included in the nightly builds:
+
+=== run_maximum_fidelity.bat
+
+Optimized for maximum image quality and consistency.
+
+**Flags:**
+----
+--disable-xformers
+--disable-smart-memory
+--disable-flash-attention
+----
+
+**Use Cases:**
+* Final production renders
+* Quality comparison testing
+* Archival work
+* When absolute consistency is required
+
+**Trade-offs:**
+* Slower performance
+* Higher memory usage
+* Maximum precision and fidelity
+
+=== run_optimized_fidelity.bat
+
+Balanced performance and quality with all bleeding-edge optimizations enabled.
+
+**Flags:**
+----
+(none - uses default optimizations)
+----
+
+**Features:**
+* Automatically uses xformers/FlashAttention when available
+* Smart memory management enabled
+* SageAttention integration when available
+
+**Use Cases:**
+* Interactive workflows
+* Rapid iteration and experimentation
+* General-purpose usage
+* Best overall performance
+
+**Trade-offs:**
+* Slight precision differences in some edge cases
+* Optimal speed and memory efficiency
+
+== CI/CD Pipeline
+
+The nightly build workflow includes comprehensive validation:
+
+=== Build Stages
+
+1. **Stage 1: Gathering Dependencies**
+   * Downloads Python 3.13 standalone
+   * Installs PyTorch nightly from CUDA 13.0 channel
+   * Installs bleeding-edge packages from AI-windows-whl
+   * Installs standard dependencies from pak files
+
+2. **Stage 2: Assembling Repositories**
+   * Clones ComfyUI from master branch
+   * Clones all custom nodes
+   * Downloads required models
+   * Runs quick test with --cpu flag
+
+3. **Validation Steps**
+   * Tests maximum fidelity launcher configuration
+   * Tests optimized fidelity launcher configuration
+   * Captures logs and checks for tracebacks
+   * Fails build if errors are detected
+
+4. **Stage 3: Compressing Package**
+   * Creates split 7z archives
+   * Generates separate models archive
+   * Names files with `cu130_nightly` suffix
+
+5. **Release Upload**
+   * Uploads to GitHub releases as draft
+   * Tags with `nightly-cu130`
+   * Marked as prerelease
+
+=== Validation Logic
+
+Each launcher configuration is tested with:
+----
+timeout 120 ./python_standalone/python.exe -s ComfyUI/main.py --cpu --windows-standalone-build [FLAGS] --quick-test-for-ci
+----
+
+Logs are captured and analyzed for:
+* Python tracebacks (indicates errors)
+* Successful initialization
+* Custom node loading
+
+If any traceback is detected, the build fails and logs are displayed.
+
+== Stability and Support
+
+=== Stability Level
+
+⚠️  **Experimental** - Nightly builds are less stable than tagged releases.
+
+Expected issues:
+* Occasional package conflicts
+* Breaking changes in PyTorch nightly
+* Compatibility issues with bleeding-edge features
+* Potential regressions in custom nodes
+
+=== When to Use Nightly Builds
+
+**Good for:**
+* Testing new features
+* Performance benchmarking
+* Contributing to development
+* Early adoption of optimizations
+
+**Not recommended for:**
+* Production workflows
+* Mission-critical projects
+* Users who need stability
+* Beginners learning ComfyUI
+
+=== Support Policy
+
+* Nightly builds are provided as-is
+* Issues specific to nightly builds should be reported to upstream projects
+* Stable releases are recommended for production use
+
+== Compatibility Notes
+
+=== character_select_stand_alone_app_test
+
+The nightly builds maintain compatibility with external tools:
+
+* **Port:** Uses default port 8188 (standard ComfyUI port)
+* **ASAR:** Set to `false` in repository configuration
+* **API:** Standard ComfyUI API compatibility maintained
+
+=== Upgrading from Stable
+
+When upgrading from a stable release to nightly:
+
+1. Extract the nightly build to a new directory
+2. Copy your models from the stable installation
+3. Test workflows before replacing your stable installation
+4. Keep a backup of your stable installation
+
+=== Downgrading to Stable
+
+If you encounter issues with nightly builds:
+
+1. Download the latest stable release
+2. Extract to a new directory
+3. Copy your models and custom workflows
+4. Resume using the stable build
+
+== Package Naming Convention
+
+Nightly builds use a distinct naming pattern:
+
+----
+ComfyUI_Windows_portable_cu130_nightly.7z.001
+ComfyUI_Windows_portable_cu130_nightly.7z.002
+...
+models.zip.001
+models.zip.002
+----
+
+The `cu130_nightly` suffix clearly identifies:
+* CUDA version: 13.0
+* Build type: Nightly (bleeding-edge)
+
+== Troubleshooting
+
+=== Common Issues
+
+**Package Installation Failures**
+
+Some bleeding-edge packages may not be available or compatible:
+----
+echo "Package install skipped (may not be available)"
+----
+
+This is expected behavior. The build continues with available packages.
+
+**Performance Differences**
+
+Nightly builds may perform differently than stable builds:
+* Faster with new optimizations
+* Slower if regressions are present
+* Different memory usage patterns
+
+**Compatibility Issues**
+
+Some custom nodes may not work with nightly builds:
+* Use ComfyUI-Manager to disable problematic nodes
+* Report issues to node maintainers
+* Wait for node updates or use stable builds
+
+=== Getting Help
+
+1. Check the build logs in GitHub Actions
+2. Review the validation step outputs
+3. Compare behavior with stable releases
+4. Report reproducible issues to upstream projects
+
+== Development and Contribution
+
+=== Forking for Custom Nightly Builds
+
+To create your own nightly builds:
+
+1. Fork the repository
+2. Modify `builder-cu130/` files as needed
+3. Run the workflow from GitHub Actions
+4. Download your custom build from releases
+
+=== Workflow Customization
+
+Key files to modify:
+
+* `builder-cu130/pak*.txt` - Package dependencies
+* `builder-cu130/stage1.sh` - Dependency installation
+* `builder-cu130/stage2.sh` - Repository assembly
+* `.github/workflows/build-cu130-nightly.yml` - CI/CD pipeline
+
+=== Testing Locally
+
+While the full build requires Windows and significant disk space, you can test components:
+
+----
+# Test bash syntax
+bash -n builder-cu130/stage1.sh
+bash -n builder-cu130/stage2.sh
+bash -n builder-cu130/stage3.sh
+
+# Validate YAML
+python3 -c "import yaml; yaml.safe_load(open('.github/workflows/build-cu130-nightly.yml'))"
+----
+
+== Future Development
+
+Potential improvements for nightly builds:
+
+* Additional optimization profiles
+* Automated performance benchmarking
+* Compatibility testing with major custom nodes
+* Weekly stability reports
+* Automatic rollback on critical failures
+
+== See Also
+
+* link:../README.adoc[Main README]
+* link:bumping-versions.adoc[Version Upgrade Guide]
+* link:manual-setup.adoc[Manual Setup Instructions]

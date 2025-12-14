@@ -1,2 +1,4 @@
 /.vscode/
 /docs/debug-list.txt
+__pycache__/
+*.pyc
