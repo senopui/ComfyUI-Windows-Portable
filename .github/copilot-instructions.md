@@ -43,12 +43,14 @@
 
 ## Launchers (ExtraScripts directory)
 ### Maximum Fidelity (`run_maximum_fidelity.bat`)
-- Command: `.\python_standalone\python.exe -s -B ComfyUI\main.py --windows-standalone-build --disable-auto-launch --disable-xformers --disable-smart-memory --disable-flash-attention %EXTRA_ARGS%`
+- Command: `.\python_standalone\python.exe -s -B ComfyUI\main.py --windows-standalone-build %EXTRA_ARGS%`
+- EXTRA_ARGS: `--disable-auto-launch --disable-xformers --disable-smart-memory --disable-flash-attention`
 - Purpose: Disables performance optimizations (xformers, smart memory, FlashAttention) and auto-launch for best quality and stability; uses Windows standalone build mode
 - Use case: Production renders, final quality outputs
 
 ### Optimized Fidelity (`run_optimized_fidelity.bat`)
-- Command: `.\python_standalone\python.exe -s -B ComfyUI\main.py --windows-standalone-build --disable-auto-launch %EXTRA_ARGS%`
+- Command: `.\python_standalone\python.exe -s -B ComfyUI\main.py --windows-standalone-build %EXTRA_ARGS%`
+- EXTRA_ARGS: `--disable-auto-launch`
 - Purpose: Default settings with all performance optimizations enabled (xformers, FlashAttention, smart memory); disables auto-launch; uses Windows standalone build mode
 - Use case: Interactive work, fast iterations, development
 
@@ -56,7 +58,7 @@
 - Set PATH: `set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts`
 - Environment variables: `HF_HUB_CACHE=%~dp0HuggingFaceHub`, `TORCH_HOME=%~dp0TorchHome`, `PYTHONPYCACHEPREFIX=%~dp0pycache`
 - Use `.\` prefix for current directory executables
-- Always use `%*` for argument pass-through
+- Use `%EXTRA_ARGS%` variable for configurable arguments; users can modify this at the top of the launcher script
 - Keep port 8188 and portable working dir semantics
 - Structure: `@echo off`, `setlocal`, commands, `endlocal`, `pause`
 
