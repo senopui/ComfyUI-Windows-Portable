@@ -22,18 +22,18 @@ set HF_ENDPOINT=https://hf-mirror.com
 @REM 下列内容用户一般无需更改
 
 @REM 该环境变量指示 HuggingFace Hub 下载模型到"本目录\HuggingFaceHub"，而不是"用户\.cache"目录。
-set HF_HUB_CACHE=%~dp0\HuggingFaceHub
+set HF_HUB_CACHE=%~dp0HuggingFaceHub
 
 @REM 该环境变量指示 Pytorch Hub 下载模型到"本目录\TorchHome"，而不是"用户\.cache"目录。
-set TORCH_HOME=%~dp0\TorchHome
+set TORCH_HOME=%~dp0TorchHome
 
 @REM 该命令配置 PATH 环境变量。
-set PATH=%PATH%;%~dp0\MinGit\cmd;%~dp0\python_standalone\Scripts
+set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 
 @REM 该环境变量使 .pyc 缓存文件集中保存在一个文件夹下，而不是随 .py 文件分布。
-set PYTHONPYCACHEPREFIX=%~dp0\pycache
+set PYTHONPYCACHEPREFIX=%~dp0pycache
 
-.\python_standalone\python.exe -s ComfyUI\main.py --windows-standalone-build %EXTRA_ARGS%
+.\python_standalone\python.exe -s -B ComfyUI\main.py --windows-standalone-build %EXTRA_ARGS%
 
 endlocal
 pause

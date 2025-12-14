@@ -1,0 +1,75 @@
+name: "Build & Upload CUDA 13.0 Nightly Package"
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run nightly at 02:00 UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  build_upload:
+    permissions:
+        contents: "write"
+        packages: "write"
+        pull-requests: "read"
+    runs-on: windows-latest
+    steps:
+        - uses: actions/checkout@v6
+
+        - name: Stage 1 Gathering Dependencies
+          shell: bash
+          working-directory: builder-cu130
+          run: bash stage1.sh
+
+        - name: Stage 2 Assembling Repositories
+          shell: bash
+          working-directory: builder-cu130
+          run: bash stage2.sh
+
+        - name: Validate Maximum Fidelity Launcher
+          shell: bash  # bash is available on Windows runners and provides timeout command
+          working-directory: builder-cu130/ComfyUI_Windows_portable
+          run: |
+            echo "Testing maximum fidelity mode (disable xformers, smart memory, and FlashAttention)..."
+            # timeout command (from bash) limits test duration to 120 seconds
+            timeout 120 ./python_standalone/python.exe -s ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --disable-flash-attention --quick-test-for-ci 2>&1 | tee maximum_fidelity_test.log || true
+            if grep -q "Traceback" maximum_fidelity_test.log; then
+              echo "ERROR: Traceback detected in maximum fidelity launcher test!"
+              cat maximum_fidelity_test.log
+              exit 1
+            fi
+            echo "Maximum fidelity launcher test passed!"
+
+        - name: Validate Optimized Fidelity Launcher
+          shell: bash  # bash is available on Windows runners and provides timeout command
+          working-directory: builder-cu130/ComfyUI_Windows_portable
+          run: |
+            echo "Testing optimized fidelity mode (default launcher arguments)..."
+            # timeout command (from bash) limits test duration to 120 seconds
+            timeout 120 ./python_standalone/python.exe -s ComfyUI/main.py --cpu --windows-standalone-build --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log || true
+            if grep -q "Traceback" optimized_fidelity_test.log; then
+              echo "ERROR: Traceback detected in optimized fidelity launcher test!"
+              cat optimized_fidelity_test.log
+              exit 1
+            fi
+            echo "Optimized fidelity launcher test passed!"
+
+        - name: Stage 3 Compressing Package
+          shell: bash
+          working-directory: builder-cu130
+          run: bash stage3.sh
+
+        - name: Upload archive to release
+          uses: xresloader/upload-to-github-release@v1
+          env:
+            # This is an always-on token in GitHub CI environment
+            # You don't need to configure it
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+            file: "builder-cu130/*.7z*;builder-cu130/*.zip*"
+            # Always draft before release
+            draft: true
+            overwrite: true
+            tag_name: "nightly-cu130"
+            release_name: "Nightly Build - CUDA 13.0 (Bleeding Edge)"
+            prerelease: true

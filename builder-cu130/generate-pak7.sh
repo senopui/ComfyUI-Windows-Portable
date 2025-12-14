@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+set -euo pipefail
 
 cat > pak7.txt << EOF
 fvcore

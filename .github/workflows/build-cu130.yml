@@ -1,4 +1,4 @@
-name: "Build & Upload CUDA 13.0 Nightly Package"
+name: "Build & Upload CUDA 13.0 Package (Manual)"
 
 on:
   workflow_dispatch:
@@ -22,6 +22,36 @@ jobs:
           shell: bash
           working-directory: builder-cu130
           run: bash stage2.sh
+
+        - name: Validate Launchers (CPU mode)
+          shell: bash
+          working-directory: builder-cu130
+          run: |
+            set -euo pipefail
+            echo "=== Testing run_maximum_fidelity.bat launcher ==="
+            cd ComfyUI_Windows_portable
+            # Run launcher with --quick-test-for-ci --cpu, capture output
+            # Note: timeout command requires bash (available by default on GitHub Windows runners)
+            timeout 300 bash -c './python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --disable-flash-attention --quick-test-for-ci 2>&1 | tee max_fidelity_test.log' || true
+            # Check for Traceback in log
+            if grep -i "Traceback" max_fidelity_test.log; then
+              echo "ERROR: run_maximum_fidelity launcher test failed with Traceback"
+              cat max_fidelity_test.log
+              exit 1
+            fi
+            echo "✓ run_maximum_fidelity launcher test passed"
+            
+            echo "=== Testing run_optimized_fidelity.bat launcher ==="
+            # Run launcher with --quick-test-for-ci --cpu, capture output
+            timeout 300 bash -c './python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log' || true
+            # Check for Traceback in log
+            if grep -i "Traceback" optimized_fidelity_test.log; then
+              echo "ERROR: run_optimized_fidelity launcher test failed with Traceback"
+              cat optimized_fidelity_test.log
+              exit 1
+            fi
+            echo "✓ run_optimized_fidelity launcher test passed"
+
 
         - name: Stage 3 Compressing Package
           shell: bash
