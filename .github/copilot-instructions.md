@@ -43,13 +43,13 @@
 
 ## Launchers (ExtraScripts directory)
 ### Maximum Fidelity (`run_maximum_fidelity.bat`)
-- Command: `.\python_standalone\python.exe -s -B ComfyUI\main.py --disable-xformers --disable-smart-memory %*`
-- Purpose: Disables performance optimizations (xformers, smart memory) for best quality and stability
+- Command: `.\python_standalone\python.exe -s -B ComfyUI\main.py --windows-standalone-build --disable-auto-launch --disable-xformers --disable-smart-memory --disable-flash-attention %EXTRA_ARGS%`
+- Purpose: Disables performance optimizations (xformers, smart memory, FlashAttention) and auto-launch for best quality and stability; uses Windows standalone build mode
 - Use case: Production renders, final quality outputs
 
 ### Optimized Fidelity (`run_optimized_fidelity.bat`)
-- Command: `.\python_standalone\python.exe -s -B ComfyUI\main.py %*`
-- Purpose: Default settings with all performance optimizations enabled (xformers, FlashAttention, smart memory)
+- Command: `.\python_standalone\python.exe -s -B ComfyUI\main.py --windows-standalone-build --disable-auto-launch %EXTRA_ARGS%`
+- Purpose: Default settings with all performance optimizations enabled (xformers, FlashAttention, smart memory); disables auto-launch; uses Windows standalone build mode
 - Use case: Interactive work, fast iterations, development
 
 ### Common launcher elements
