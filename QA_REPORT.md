@@ -8,7 +8,7 @@
 
 ## 1) PR Inventory
 - Git history merges: PR **#6** (“Merge with main: Sync PR #6 with all improvements from PR #1, #4, and #15”) – adds build workflows, portable builders (cu128, cu130 nightly/stable), launchers, docs, and packaging attachments.
-- GitHub CLI inventory: **not available** (GH_TOKEN not set in this environment); rely on git history above.
+- GitHub CLI inventory (GH_TOKEN now available): merged PRs include **#16, #15, #14, #13, #12, #11, #10, #9, #8, #7, #6, #5, #4, #3, #1** (latest: #16 fix agent syntax & Copilot config; #15 fix CUDA 13 build; #14 batch file path/Python flags).
 
 ## 2) Static Validation
 - Actionlint: `/tmp/actionlint -shellcheck '' .github/workflows/*.yml` → **PASS** (v1.7.9).
