@@ -56,15 +56,20 @@ echo "=== Attempting flash-attn from AI-windows-whl ==="
 $pip_exe install flash-attn --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn install failed (may not be available for cp313/torch-nightly)"
 
 # Guarded install: xformers via AI-windows-whl
-# Use --no-deps to prevent xformers from downgrading torch nightly to stable version
+# Install xformers normally first to get all dependencies, then check if torch was downgraded
 echo "=== Attempting xformers from AI-windows-whl ==="
-$pip_exe install xformers --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers install failed (may not be available for cp313/torch-nightly)"
+$pip_exe install xformers --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers install failed (may not be available for cp313/torch-nightly)"
 
 # Verify torch nightly is still installed after xformers (not downgraded)
 echo "=== Verifying PyTorch version after xformers install ==="
 "$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'torch was downgraded to {torch.__version__}'; print(f'PyTorch {torch.__version__} verified')" || {
     echo "WARNING: PyTorch version check failed, reinstalling PyTorch nightly"
     $pip_exe install --force-reinstall --no-deps -r "$workdir"/pak3.txt
+    # Verify recovery reinstall succeeded
+    "$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'torch recovery reinstall failed, got {torch.__version__}'; print(f'PyTorch {torch.__version__} recovery verified')" || {
+        echo "ERROR: PyTorch recovery reinstall failed, aborting build"
+        exit 1
+    }
 }
 
 # Guarded install: sageattention via AI-windows-whl
