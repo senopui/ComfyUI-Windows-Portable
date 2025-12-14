@@ -41,6 +41,7 @@ Optimized for maximum image quality and consistency.
 ----
 --disable-xformers
 --disable-smart-memory
+--disable-flash-attention
 ----
 
 **Use Cases:**
@@ -60,13 +61,12 @@ Balanced performance and quality with all bleeding-edge optimizations enabled.
 
 **Flags:**
 ----
---auto-precision
+(none - uses default optimizations)
 ----
 
 **Features:**
 * Automatically uses xformers/FlashAttention when available
 * Smart memory management enabled
-* Auto-precision for optimal speed
 * SageAttention integration when available
 
 **Use Cases:**

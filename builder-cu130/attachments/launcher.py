@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import subprocess
+import shlex
 from gooey import Gooey, GooeyParser
 
 # Code mostly written by DeepSeek, Gemini and ChatGPT
@@ -108,17 +109,17 @@ def main():
     attn_tab = parser.add_argument_group('Attention Implementation', 
                                            'Options are mutually exclusive. If nothing is selected, xFormers will be used by default',
                                            gooey_options={'show_border': True})
-    attn_tab.add_argument('--use-pytorch-cross-attention', 
+    attn_tab.add_argument('--use_pytorch_cross_attention', 
                                  metavar='Disable xFormers/FlashAttention/SageAttention', 
                                  action='store_true',
                                  help='Use native PyTorch cross-attention. More stable (not better) image generation. Not recommended for videos (--use-pytorch-cross-attention)',
                                  default=saved_config.get("use_pytorch_cross_attention", False) if saved_config else False)
-    attn_tab.add_argument('--use-sage-attention',
+    attn_tab.add_argument('--use_sage_attention',
                                  metavar='Use SageAttention',
                                  action='store_true',
                                  help='Better performance but less compatibility (--use-sage-attention)',
                                  default=saved_config.get("use_sage_attention", False) if saved_config else False)
-    attn_tab.add_argument('--use-flash-attention',
+    attn_tab.add_argument('--use_flash_attention',
                                  metavar='Use FlashAttention',
                                  action='store_true',
                                  help='On par with xFormers (--use-flash-attention)',
@@ -137,11 +138,11 @@ def main():
     if args.hf_token:
         os.environ['HF_TOKEN'] = args.hf_token
 
-    # Set PIP mirror only if specified
+    # Set PIP mirror
     if args.pip_index_url:
         os.environ['PIP_INDEX_URL'] = args.pip_index_url
 
-    # Set HuggingFace mirror only if specified
+    # Set HuggingFace mirror
     if args.hf_endpoint:
         os.environ['HF_ENDPOINT'] = args.hf_endpoint
 
@@ -179,7 +180,6 @@ def main():
 
     # Add user-defined extra parameters
     if args.extra_args:
-        import shlex
         extra_args = shlex.split(args.extra_args)
         command.extend(extra_args)
 

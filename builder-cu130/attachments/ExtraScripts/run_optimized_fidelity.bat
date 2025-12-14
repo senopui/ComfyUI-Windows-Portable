@@ -1,13 +1,11 @@
-@echo on
+@echo off
 setlocal
 
-@REM Optimized Fidelity Mode - Default optimizations enabled for balanced performance and quality
-@REM This mode leverages bleeding-edge optimizations including:
-@REM   - xformers/FlashAttention: Memory-efficient attention for faster processing
-@REM   - Auto precision: Automatic mixed precision for optimal speed
-@REM   - SageAttention: Advanced attention mechanism when available
-@REM   - Smart memory: Intelligent memory management
-@REM Use this mode for best performance while maintaining excellent quality
+@REM Optimized High Fidelity Mode - Balances quality with performance
+@REM - Enables xformers for optimized attention (when available)
+@REM - Enables smart memory management
+@REM - FlashAttention used when available (faster and still high quality)
+@REM - Default port 8188 (compatible with character_select_stand_alone_app_test)
 
 @REM If you don't want the browser to open automatically, add [ --disable-auto-launch ] after the last argument.
 set "EXTRA_ARGS=--disable-auto-launch"
@@ -39,9 +37,7 @@ set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 @REM This command will let the .pyc files to be stored in one place.
 set PYTHONPYCACHEPREFIX=%~dp0pycache
 
-@REM Optimized Fidelity Mode: All optimizations enabled (default behavior with auto precision)
-@REM xformers and FlashAttention are automatically used when available
-.\python_standalone\python.exe -s ComfyUI\main.py --windows-standalone-build --auto-precision %EXTRA_ARGS%
+.\python_standalone\python.exe -s -B ComfyUI\main.py --windows-standalone-build %EXTRA_ARGS%
 
 endlocal
 pause

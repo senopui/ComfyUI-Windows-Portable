@@ -29,16 +29,36 @@ but preloaded with numerous custom nodes and Python packages, with all dependenc
 * This repo uses the GitHub pipeline for packaging, making it easy for DIY. No need to configure CI/CD, simply fork the repository on GitHub to run the packaging script. See <<build-your-own, Creating Your Own All-In-One Package>>.
 
 
+== Build Variants
+
+This repository provides two build variants:
+
+* *Stable Build (CUDA 12.8)*: Production-ready with tested PyTorch stable releases
+** Package name: `ComfyUI_Windows_portable_cu128.7z.*`
+** Uses PyTorch with CUDA 12.8 support
+** Recommended for most users
+
+* *Nightly Build (CUDA 13.0)*: Bleeding-edge with latest features
+** Package name: `ComfyUI_Windows_portable_cu130_nightly.7z.*`
+** Uses Python 3.13 + PyTorch 2.10+ nightly with CUDA 13.0
+** Includes performance optimizations: FlashAttention, xformers, SageAttention, NATTEN, etc.
+** Recommended for users who want the latest features and performance improvements
+
 == How to Use
 
 . Only NVIDIA GPUs are supported, preferably with the latest driver installed.
+** For CUDA 13.0 nightly builds, ensure you have the latest NVIDIA drivers
 
 . Download the package files from the
-https://github.com/YanWenKun/ComfyUI-Windows-Portable/releases[release page].
-** Or you can download them directly:
-*** https://github.com/YanWenKun/ComfyUI-Windows-Portable/releases/latest/download/ComfyUI_Windows_portable_cu128.7z.001[ComfyUI_Windows_portable_cu128.7z.001]
-*** https://github.com/YanWenKun/ComfyUI-Windows-Portable/releases/latest/download/ComfyUI_Windows_portable_cu128.7z.002[ComfyUI_Windows_portable_cu128.7z.002]
-*** https://github.com/YanWenKun/ComfyUI-Windows-Portable/releases/latest/download/models.zip.001[models.zip.001] (If you are upgrading from a previous release, you don't need this file.)
+https://github.com/senopui/ComfyUI-Windows-Portable/releases[release page].
+** For Stable Build (CUDA 12.8):
+*** https://github.com/senopui/ComfyUI-Windows-Portable/releases/latest/download/ComfyUI_Windows_portable_cu128.7z.001[ComfyUI_Windows_portable_cu128.7z.001]
+*** https://github.com/senopui/ComfyUI-Windows-Portable/releases/latest/download/ComfyUI_Windows_portable_cu128.7z.002[ComfyUI_Windows_portable_cu128.7z.002]
+** For Nightly Build (CUDA 13.0):
+*** https://github.com/senopui/ComfyUI-Windows-Portable/releases/download/nightly-cu130/ComfyUI_Windows_portable_cu130_nightly.7z.001[ComfyUI_Windows_portable_cu130_nightly.7z.001]
+*** https://github.com/senopui/ComfyUI-Windows-Portable/releases/download/nightly-cu130/ComfyUI_Windows_portable_cu130_nightly.7z.002[ComfyUI_Windows_portable_cu130_nightly.7z.002]
+** Models (shared between builds):
+*** https://github.com/senopui/ComfyUI-Windows-Portable/releases/latest/download/models.zip.001[models.zip.001] (If you are upgrading from a previous release, you don't need this file.)
 
 ** Open the `.7z.001` and extract it to a convenient place. 
 Open the `.zip.001` and extract it to the same place. 
@@ -62,7 +82,11 @@ image::docs/screenshot-launcher.webp["Launcher Screenshot"]
 
 == Tips and Tricks
 
-. The `ExtraScripts` folder contains command-line launch scripts, which are equivalent to the launcher. 
+. The `ExtraScripts` folder contains command-line launch scripts, which are equivalent to the launcher.
+** *For Nightly Build (cu130)*: Two specialized launcher scripts are available:
+*** `run_maximum_fidelity.bat`: Prioritizes quality and stability (disables xformers and smart memory)
+*** `run_optimized_fidelity.bat`: Balances quality with performance (enables all optimizations)
+** Both launchers maintain compatibility with `character_select_stand_alone_app_test` (default port 8188)
 
 ** *New in Nightly Builds:* Two additional launcher scripts are available:
 *** `run_maximum_fidelity.bat` - Disables xformers and smart memory optimizations for maximum image quality. Use when you need the highest possible fidelity and don't mind slower performance.

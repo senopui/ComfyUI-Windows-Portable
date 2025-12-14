@@ -1,14 +1,14 @@
-@echo on
+@echo off
 setlocal
 
-@REM Maximum Fidelity Mode - Disables xformers and smart memory for best quality
-@REM Use this mode when you need the highest possible image quality and don't mind slower performance
-@REM This mode disables optimizations that might impact fidelity:
-@REM   - xformers: Uses standard attention for maximum precision
-@REM   - smart memory: Disables memory optimization for consistent results
+@REM Maximum Fidelity Mode - Favors quality and stability over speed
+@REM - Disables xformers (uses PyTorch's native attention for maximum compatibility)
+@REM - Disables smart memory management (more conservative memory handling)
+@REM - Disables FlashAttention for maximum precision
+@REM - Default port 8188 (compatible with character_select_stand_alone_app_test)
 
 @REM If you don't want the browser to open automatically, add [ --disable-auto-launch ] after the last argument.
-set "EXTRA_ARGS=--disable-auto-launch"
+set "EXTRA_ARGS=--disable-auto-launch --disable-xformers --disable-smart-memory --disable-flash-attention"
 
 @REM To set proxy, edit and uncomment the two lines below (remove 'rem ' in the beginning of line).
 rem set HTTP_PROXY=http://localhost:1080
@@ -37,8 +37,7 @@ set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
 @REM This command will let the .pyc files to be stored in one place.
 set PYTHONPYCACHEPREFIX=%~dp0pycache
 
-@REM Maximum Fidelity Mode: Disable xformers and smart memory
-.\python_standalone\python.exe -s ComfyUI\main.py --windows-standalone-build --disable-xformers --disable-smart-memory %EXTRA_ARGS%
+.\python_standalone\python.exe -s -B ComfyUI\main.py --windows-standalone-build %EXTRA_ARGS%
 
 endlocal
 pause
