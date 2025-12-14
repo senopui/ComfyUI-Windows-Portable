@@ -18,3 +18,18 @@ jobs:
           shell: bash
           working-directory: builder
           run: bash stage2.sh
+
+        - name: QA CPU Smoke Test (portable layout)
+          shell: pwsh
+          working-directory: builder
+          run: |
+            Set-ExecutionPolicy Bypass -Scope Process -Force
+            ../scripts/qa_smoketest_windows.ps1 -PortableRoot "$PWD/ComfyUI_Windows_portable"
+
+        - name: Validate minimal workflow fixture
+          shell: bash
+          working-directory: builder
+          run: |
+            ./ComfyUI_Windows_portable/python_standalone/python.exe -s ../scripts/qa_validate_workflow.py \
+              --workflow ../tests/workflows/minimal_text2img.json \
+              --comfyui-root ./ComfyUI_Windows_portable/ComfyUI
