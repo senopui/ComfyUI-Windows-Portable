@@ -42,7 +42,7 @@ Diagnose and fix runtime/packaging/workflow/launcher/node issues in this repo.
 
 ## Good output example
 ```diff
-- ./python_standalone/python.exe ComfyUI/main.py
+- .\python_standalone\python.exe ComfyUI\main.py
 + .\python_standalone\python.exe -s -B ComfyUI\main.py --windows-standalone-build
 ```
 (Fixed: missing portable invocation flags)
