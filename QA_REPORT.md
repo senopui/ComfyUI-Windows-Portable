@@ -43,7 +43,7 @@
 
 ## Dependency Audit Notes
 - Stable path (builder/cu128): fixed Python standalone URLs; PyTorch from stable cu130 index; transformers temp-fix; cp312/313 differences noted; binaries bundled.
-- Nightly path (cu130): nightly torch cu130 + guarded performance wheels; torch version revalidated after xformers; fallbacks for cupy; best-effort installs already non-fatal.
+- Nightly path (cu130): nightly torch cu130 + guarded performance wheels; torch version revalidated after xformers; fallbacks for cupy; best-effort installs already non-fatal. Raised numpy floor in `pak4.txt` to `numpy>=2.1.0,<3` to avoid OpenCV resolver backtracking on Python 3.13.
 - Recommendations: keep treating missing performance wheels as warnings; monitor ORT CUDA13 nightly feed and cp313 wheel availability for dlib/insightface; retain torch recovery reinstall guard.
 
 ## Status Matrix
@@ -78,4 +78,5 @@
 
 ## Open Issues / Blockers
 - Heavy build/packaging not re-run in this QA pass (resource/time). CI smoke covers CPU path; GPU verification requires self-hosted runner or manual Windows machine with CUDA 13 drivers.
+- Nightly build should be re-run to confirm OpenCV/numpy resolution on Python 3.13 after raising the numpy floor in `builder-cu130/pak4.txt`.
 - cp313 wheel gaps for dlib/insightface and performance wheels remain best-effort; failures are logged but non-fatal in nightly builder.
