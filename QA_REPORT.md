@@ -20,11 +20,11 @@
 ### NEW BLOCKER: Unicode Character in Windows Console - FIXED
 - **CI run**: 20219404672 (2025-12-15 03:21 UTC)
 - **Failure location**: `builder-cu130/stage1.sh` line 166
-- **Root cause**: The verification message contained a Unicode checkmark character:
+- **Root cause**: The verification message contained a Unicode checkmark character (U+2713):
   ```python
-  print('✓ PyTorch cu130 nightly verified')
+  print('[checkmark] PyTorch cu130 nightly verified')  # Original used Unicode U+2713
   ```
-  Windows console uses `cp1252` encoding which cannot represent `✓` (U+2713).
+  Windows console uses `cp1252` encoding which cannot represent Unicode checkmarks.
 - **Error**:
   ```
   UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
@@ -70,7 +70,7 @@
 
 ### 5.1 Unicode Character in stage1.sh - FIXED
 - **File**: `builder-cu130/stage1.sh` line 166
-- **Original code**: `print('✓ PyTorch cu130 nightly verified')`
+- **Original code**: Used Unicode checkmark (U+2713) in print statement
 - **Fixed to**: `print('[OK] PyTorch cu130 nightly verified')`
 
 ### 5.2 GPU Testing Gap

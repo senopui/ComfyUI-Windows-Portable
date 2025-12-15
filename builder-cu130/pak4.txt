@@ -24,7 +24,8 @@ torchmetrics
 transformers
 
 # Make sure opencv version is compatible with numpy and Python 3.13
-# Raise numpy floor to avoid backtracking to cp312/cp311 wheels on Py3.13
+# Raise numpy floor to >=2.1.0 to prevent pip from selecting older OpenCV versions
+# that require numpy 1.21.x (which lacks Python 3.13 wheels)
 numpy>=2.1.0,<3.0
 # Use opencv >=4.10.0 for Python 3.13 compatibility
 opencv-contrib-python>=4.10.0
