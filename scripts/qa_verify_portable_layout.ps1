@@ -29,8 +29,8 @@ $checks = @(
     @{ Path = "python_standalone/Scripts/ffmpeg.exe"; Type = "File"; Description = "Bundled ffmpeg" },
     @{ Path = "ComfyUI"; Type = "Directory"; Description = "ComfyUI checkout" },
     @{ Path = "ComfyUI/main.py"; Type = "File"; Description = "ComfyUI entrypoint" },
-    @{ Path = "custom_nodes"; Type = "Directory"; Description = "Custom nodes directory" },
-    @{ Path = "extensions"; Type = "Directory"; Description = "Extensions directory" },
+    @{ Path = "ComfyUI/custom_nodes"; Type = "Directory"; Description = "Custom nodes directory" },
+    @{ Path = "ComfyUI/extensions"; Type = "Directory"; Description = "Extensions directory" },
     @{ Path = "ExtraScripts"; Type = "Directory"; Description = "ExtraScripts launchers" },
     @{ Path = "MinGit"; Type = "Directory"; Description = "Portable Git" }
 )
