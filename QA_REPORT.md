@@ -1,4 +1,4 @@
-# Final QA / QA Pass
+# Final QA Pass
 
 ## Baseline
 - Branch: `copilot/final-qc-qa-pass-again`

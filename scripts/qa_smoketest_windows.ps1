@@ -34,7 +34,7 @@ function Run-Py {
     param([string[]]$Args)
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $pythonExe
-    $psi.ArgumentList.AddRange($Args)
+    $psi.ArgumentList = $Args
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
     $psi.UseShellExecute = $false
@@ -60,7 +60,7 @@ if ($ExpectGpu -and ($gpuCheck.out -notmatch "cuda_available: True")) {
     exit 2
 }
 
-# Quick test (CPU)
+# Quick test (CPU or GPU based on mode)
 $modeArgs = if ($Mode -eq "gpu") { @("--cuda-device", "0") } else { @("--cpu") }
 $run = Run-Py -Args (@("-s", "-B", $comfyMain, "--quick-test-for-ci") + $modeArgs)
 [IO.File]::WriteAllText($logPath, $run.out + "`n`nSTDERR:`n" + $run.err)

@@ -75,8 +75,8 @@
     [2, 2, 5, 1, "CONDITIONING"],
     [3, 3, 5, 2, "CONDITIONING"],
     [4, 4, 5, 3, "LATENT"],
-    [5, 1, 6, 0, "MODEL"],
-    [6, 5, 6, 1, "LATENT"],
+    [5, 1, 6, 2, "VAE"],
+    [6, 5, 6, 0, "LATENT"],
     [7, 6, 7, 0, "IMAGE"]
   ],
   "extra": {
