@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install lightweight tooling
         run: |
@@ -41,27 +41,27 @@ jobs:
           git --version
 
           echo -e "\n7z version:"
-          7z | head -3
+          7z 2>&1 | head -3
 
           echo -e "\nShellcheck version:"
           shellcheck --version | head -2
 
           echo -e "\n=== Syntax Check builder scripts ==="
+          shopt -s nullglob
           for script in builder*/stage*.sh; do
-            if [ -f "$script" ]; then
-              echo "Checking syntax: $script"
-              bash -n "$script" && echo "  ✓ Syntax OK" || \
-                echo "  ✗ Syntax error"
-            fi
+            echo "Checking syntax: $script"
+            bash -n "$script" && echo "  ✓ Syntax OK" || \
+              echo "  ✗ Syntax error"
           done
+          shopt -u nullglob
 
           echo -e "\n=== ShellCheck linting (warnings allowed) ==="
+          shopt -s nullglob
           for script in builder*/stage*.sh; do
-            if [ -f "$script" ]; then
-              echo "Linting: $script"
-              shellcheck "$script" || \
-                echo "  → Warnings/errors found (non-fatal)"
-            fi
+            echo "Linting: $script"
+            shellcheck "$script" || \
+              echo "  → Warnings/errors found (non-fatal)"
           done
+          shopt -u nullglob
 
           exit 0  # Always succeed for informational checks
