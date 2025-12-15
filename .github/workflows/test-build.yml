@@ -20,8 +20,8 @@ jobs:
           run: bash stage2.sh
 
         - name: Validate workflow fixture
-          shell: bash
-          run: builder/ComfyUI_Windows_portable/python_standalone/python.exe -s -B scripts/qa_validate_workflow.py --root "$PWD"
+          shell: pwsh
+          run: ./builder/ComfyUI_Windows_portable/python_standalone/python.exe -s -B scripts/qa_validate_workflow.py --root "$PWD"
 
         - name: QA Smoke Test (CPU)
           shell: pwsh

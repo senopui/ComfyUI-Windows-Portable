@@ -31,20 +31,30 @@ if (-not (Test-Path $pythonExe)) { throw "python_standalone not found at $python
 if (-not (Test-Path $comfyMain)) { throw "ComfyUI main missing at $comfyMain" }
 
 function Run-Py {
-    param([string[]]$Args)
+    param(
+        [string[]]$Args,
+        [int]$TimeoutSeconds = 600
+    )
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $pythonExe
-    $psi.ArgumentList = $Args
+    foreach ($a in $Args) { [void]$psi.ArgumentList.Add($a) }
+    if ($psi.ArgumentList.Count -eq 0 -and $Args.Count -gt 0) {
+        $psi.Arguments = ($Args -join ' ')
+    }
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
     $psi.UseShellExecute = $false
     $psi.WorkingDirectory = $portableRoot
     $proc = [System.Diagnostics.Process]::Start($psi)
+    $timedOut = -not $proc.WaitForExit($TimeoutSeconds * 1000)
+    if ($timedOut) {
+        try { $proc.Kill() } catch {}
+        $proc.WaitForExit()
+    }
     $stdout = $proc.StandardOutput.ReadToEnd()
     $stderr = $proc.StandardError.ReadToEnd()
-    $proc.WaitForExit()
-    $rc = $proc.ExitCode
-    return @{ code = $rc; out = $stdout; err = $stderr }
+    $rc = if ($timedOut) { 124 } else { $proc.ExitCode }
+    return @{ code = $rc; out = $stdout; err = $stderr; timeout = $timedOut }
 }
 
 # CUDA detection (best effort)
@@ -55,6 +65,10 @@ print(f'cuda_available: {torch.cuda.is_available()}')
 print(f'device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none"}')
 "@)
 Write-Host $gpuCheck.out.Trim()
+if ($gpuCheck.code -ne 0) {
+    Write-Error "Torch probe failed (exit $($gpuCheck.code)). stderr: $($gpuCheck.err)"
+    exit $gpuCheck.code
+}
 if ($ExpectGpu -and ($gpuCheck.out -notmatch "cuda_available: True")) {
     Write-Error "GPU mode expected but torch.cuda.is_available() is False"
     exit 2
@@ -65,12 +79,22 @@ $modeArgs = if ($Mode -eq "gpu") { @("--cuda-device", "0") } else { @("--cpu") }
 $run = Run-Py -Args (@("-s", "-B", $comfyMain, "--quick-test-for-ci") + $modeArgs)
 [IO.File]::WriteAllText($logPath, $run.out + "`n`nSTDERR:`n" + $run.err)
 Write-Host $run.out
+if ($run.timeout) {
+    Write-Error "Quick-test timed out. See $logPath"
+    exit 124
+}
 if ($run.code -ne 0) {
     Write-Error "Quick-test failed (exit $($run.code)). See $logPath"
     exit $run.code
 }
 
-if ($run.out -match "Traceback" -or $run.err -match "Traceback" -or $run.err -match "ImportError") {
+if (
+    $run.out -match "Traceback" -or
+    $run.err -match "Traceback" -or
+    $run.err -match "ImportError" -or
+    $run.err -match "ModuleNotFoundError" -or
+    $run.out -match "ModuleNotFoundError"
+) {
     Write-Error "Traceback detected during smoke test. See $logPath"
     exit 3
 }
