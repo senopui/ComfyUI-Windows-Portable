@@ -29,7 +29,7 @@ Portable build maintenance, embedded Python, dependency wheels, and archive crea
 - Use 7z compression with volume splits at 2140000000 bytes (GitHub limit)
 - Separate models into `models.zip.*`
 
-## Behaviors (but do NOT edit builder scripts in this PR)
+## Behaviors
 - Follow exact order already implemented in `builder*/stage1.sh`
 - Use shallow git clones for custom nodes (`gcs` pattern)
 - Validate with `--quick-test-for-ci --cpu`

@@ -20,9 +20,9 @@ applyTo: "builder*/**"
 ## Pip/requirements rules
 - Do not restate or reorder the dependency install sequence in prose.
 - Instead: "Follow the exact order already implemented in each `builder*/stage1.sh` (note: `builder/` differs from `builder-cu128/` and `builder-cu130/`, e.g., presence of pakZ)."
-- If you edit pak files, keep the change minimal and document why in the PR (but this PR should NOT edit pak files).
+- If editing pak files, keep changes minimal and document the reason.
 
-## Validation (reference-only; don't change scripts in this PR)
+## Validation (reference-only; prefer documenting patterns over modifying scripts)
 - Quick test command exists in builder scripts:
   `./python_standalone/python.exe -s -B ComfyUI/main.py --quick-test-for-ci --cpu`
 - Workflows also validate by scanning logs for `Traceback`; keep that concept consistent when documenting checks.

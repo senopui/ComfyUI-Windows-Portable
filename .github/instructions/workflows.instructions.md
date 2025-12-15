@@ -17,4 +17,4 @@ applyTo: ".github/workflows/**"
   - run quick-test with a timeout
   - capture logs
   - fail on `Traceback` detection
-- Do not add new third-party actions or caching in this PR; document patterns only.
+- Do not add new third-party actions or caching without explicit justification; document patterns when possible.

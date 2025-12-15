@@ -32,9 +32,9 @@ GitHub Actions workflows for stable and nightly builds.
   - capture logs
   - fail on `Traceback` detection
 
-## Constraints (but do NOT edit workflows in this PR)
+## Constraints
 - Keep port 8188 default
 - Maintain portable environment (no system-wide installs)
 - Keep embedded Python and in-tree binaries
-- Do not add new third-party actions or caching in this PR
-- Keep YAML diffs small; document patterns only
+- Avoid adding new third-party actions or caching without strong justification
+- Keep YAML diffs small; document patterns when possible
