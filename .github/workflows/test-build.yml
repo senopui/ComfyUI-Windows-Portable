@@ -24,6 +24,9 @@ jobs:
           working-directory: builder
           run: |
             Set-ExecutionPolicy Bypass -Scope Process -Force
+            # $PWD is a PowerShell automatic variable that resolves to the current working directory.
+            # Using $PWD here is appropriate because we're in a pwsh shell with a known working-directory
+            # set by the workflow step, ensuring the path is resolved correctly within the PowerShell context.
             ../scripts/qa_verify_portable_layout.ps1 -PortableRoot "$PWD/ComfyUI_Windows_portable"
 
         - name: QA CPU Smoke Test (portable layout)

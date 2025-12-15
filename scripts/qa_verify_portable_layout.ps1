@@ -32,6 +32,8 @@ $checks = @(
     @{ Path = "ComfyUI/custom_nodes"; Type = "Directory"; Description = "Custom nodes directory" },
     @{ Path = "ComfyUI/extensions"; Type = "Directory"; Description = "Extensions directory" },
     @{ Path = "ExtraScripts"; Type = "Directory"; Description = "ExtraScripts launchers" },
+    @{ Path = "ExtraScripts/run_cpu.bat"; Type = "File"; Description = "CPU launcher script" },
+    @{ Path = "ExtraScripts/run_nvidia_gpu.bat"; Type = "File"; Description = "GPU launcher script" },
     @{ Path = "MinGit"; Type = "Directory"; Description = "Portable Git" }
 )
 
