@@ -18,3 +18,11 @@ jobs:
           shell: bash
           working-directory: builder
           run: bash stage2.sh
+
+        - name: Validate workflow fixture
+          shell: pwsh
+          run: ./builder/ComfyUI_Windows_portable/python_standalone/python.exe -s -B scripts/qa_validate_workflow.py --root "$PWD"
+
+        - name: QA Smoke Test (CPU)
+          shell: pwsh
+          run: ./scripts/qa_smoketest_windows.ps1 -RootPath "$PWD" -Mode cpu
