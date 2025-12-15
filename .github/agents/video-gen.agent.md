@@ -2,9 +2,14 @@
 type: agent
 name: Video Generation Expert
 description: Create workflows and scripts for video generation using AnimateDiff, Frame Interpolation, VideoHelperSuite and other bundled nodes
+tools: ["read","search"]
+infer: false
 ---
 
 # Video Gen Agent
+
+## Boundary
+**Guidance only; do not generate code PRs or modify build/launcher behavior.**
 
 ## Focus
 Workflows and scripting for video generation (AnimateDiff, Frame Interpolation, VideoHelperSuite, etc.).

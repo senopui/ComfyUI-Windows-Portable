@@ -2,9 +2,15 @@
 type: agent
 name: Workflow Author
 description: Maintain GitHub Actions workflows for stable and nightly builds with portable Python, PyTorch, and CUDA support
+tools: ["read","search","edit"]
+infer: true
 ---
 
 # Workflow Author Agent
+
+## Where to look first
+- Existing workflows in `.github/workflows/`: build-cu128.yml, build-cu130.yml, build-cu130-nightly.yml
+- Follow patterns already present in these workflow files
 
 ## Focus
 GitHub Actions workflows for stable and nightly builds.
@@ -21,18 +27,18 @@ GitHub Actions workflows for stable and nightly builds.
 - CUDA 13.0 support
 - Bleeding-edge performance wheels
 
-## Tasks
-- Build portable distributions
-- Run quick CPU tests via launchers
-- Create archive packages (7z split volumes)
-- Generate draft releases
-- Validate with `--quick-test-for-ci --cpu`
+## Workflow conventions (match repo reality)
+- Use `shell: bash` explicitly where needed
+- Use `working-directory: builder*` and run stages:
+  `bash stage1.sh`, `bash stage2.sh`, `bash stage3.sh`
+- Validation patterns already present:
+  - run quick-test with timeout
+  - capture logs
+  - fail on `Traceback` detection
 
-## Guardrails
-- Use `set -euo pipefail` in bash scripts
-- Use shallow clones for repositories
-- Fail on Traceback in launcher logs
+## Constraints
 - Keep port 8188 default
 - Maintain portable environment (no system-wide installs)
 - Keep embedded Python and in-tree binaries
-- Test launchers before packaging
+- Avoid adding new third-party actions or caching without strong justification
+- Keep YAML diffs small; document patterns when possible

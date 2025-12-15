@@ -2,9 +2,15 @@
 type: agent
 name: Packaging Expert
 description: Maintain portable builds, embedded Python, dependency wheels, and create distribution archives
+tools: ["read","search","edit","execute"]
+infer: true
 ---
 
 # Packaging Expert Agent
+
+## Where to look first
+- Stage scripts: `builder*/stage1.sh` (dependencies), `builder*/stage3.sh` (packaging/7z)
+- Dependency files: `builder*/pak*.txt` for package lists
 
 ## Focus
 Portable build maintenance, embedded Python, dependency wheels, and archive creation.
@@ -28,8 +34,11 @@ Portable build maintenance, embedded Python, dependency wheels, and archive crea
 - Separate models into `models.zip.*`
 
 ## Behaviors
-- Maintain embedded Python environment
-- Keep all dependencies portable (no system-wide installs)
-- Use shallow git clones for custom nodes
+- Follow exact order already implemented in `builder*/stage1.sh`
+- Use shallow git clones for custom nodes (`gcs` pattern)
 - Validate with `--quick-test-for-ci --cpu`
 - Log package versions for debugging
+
+## Good output example
+"To validate packaging fix: run stage3.sh and verify archive split at ~2.14GB; extract and test with quick-test command."
+(Describes validation without changing pak pins)
