@@ -23,35 +23,33 @@ jobs:
           working-directory: builder-cu130
           run: bash stage2.sh
 
-        - name: Validate Launchers (CPU mode)
-          shell: bash
-          working-directory: builder-cu130
+        - name: Validate Maximum Fidelity Launcher
+          shell: bash  # bash is available on Windows runners and provides timeout command
+          working-directory: builder-cu130/ComfyUI_Windows_portable
           run: |
-            set -euo pipefail
-            echo "=== Testing run_maximum_fidelity.bat launcher ==="
-            cd ComfyUI_Windows_portable
-            # Run launcher with --quick-test-for-ci --cpu, capture output
-            # Note: timeout command requires bash (available by default on GitHub Windows runners)
-            timeout 300 bash -c './python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --disable-flash-attention --quick-test-for-ci 2>&1 | tee max_fidelity_test.log' || true
-            # Check for Traceback in log
-            if grep -i "Traceback" max_fidelity_test.log; then
-              echo "ERROR: run_maximum_fidelity launcher test failed with Traceback"
-              cat max_fidelity_test.log
+            echo "Testing maximum fidelity mode (disable xformers, smart memory, and FlashAttention)..."
+            # timeout command (from bash) limits test duration to 120 seconds
+            timeout 120 ./python_standalone/python.exe -s ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --disable-flash-attention --quick-test-for-ci 2>&1 | tee maximum_fidelity_test.log || true
+            if grep -q "Traceback" maximum_fidelity_test.log; then
+              echo "ERROR: Traceback detected in maximum fidelity launcher test!"
+              cat maximum_fidelity_test.log
               exit 1
             fi
-            echo "✓ run_maximum_fidelity launcher test passed"
-            
-            echo "=== Testing run_optimized_fidelity.bat launcher ==="
-            # Run launcher with --quick-test-for-ci --cpu, capture output
-            timeout 300 bash -c './python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log' || true
-            # Check for Traceback in log
-            if grep -i "Traceback" optimized_fidelity_test.log; then
-              echo "ERROR: run_optimized_fidelity launcher test failed with Traceback"
+            echo "Maximum fidelity launcher test passed!"
+
+        - name: Validate Optimized Fidelity Launcher
+          shell: bash  # bash is available on Windows runners and provides timeout command
+          working-directory: builder-cu130/ComfyUI_Windows_portable
+          run: |
+            echo "Testing optimized fidelity mode (default launcher arguments)..."
+            # timeout command (from bash) limits test duration to 120 seconds
+            timeout 120 ./python_standalone/python.exe -s ComfyUI/main.py --cpu --windows-standalone-build --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log || true
+            if grep -q "Traceback" optimized_fidelity_test.log; then
+              echo "ERROR: Traceback detected in optimized fidelity launcher test!"
               cat optimized_fidelity_test.log
               exit 1
             fi
-            echo "✓ run_optimized_fidelity launcher test passed"
-
+            echo "Optimized fidelity launcher test passed!"
 
         - name: Stage 3 Compressing Package
           shell: bash
