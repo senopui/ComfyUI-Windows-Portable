@@ -8,6 +8,11 @@ infer: true
 
 # Bug Fixer Agent
 
+## Where to look first
+- Builder stage scripts (`stage1.sh`, `stage2.sh`, `stage3.sh`) for build issues
+- Launcher `.bat` files in `builder*/attachments/ExtraScripts/` for runtime issues
+- Workflow files in `.github/workflows/` for CI/CD issues
+
 ## Focus
 Diagnose and fix runtime/packaging/workflow/launcher/node issues in this repo.
 

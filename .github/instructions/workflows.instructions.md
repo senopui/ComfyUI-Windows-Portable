@@ -4,11 +4,15 @@ applyTo: ".github/workflows/**"
 
 # GitHub Actions workflows (.github/workflows/**)
 
+## Where to look first
+- Existing workflow files in `.github/workflows/` for patterns already in use
+- Match conventions present in build-cu128.yml, build-cu130.yml, build-cu130-nightly.yml
+
 ## Scope/intent
 - Workflows must preserve the repo's portability constraints and existing builder stage execution model.
 
 ## Shell + working directory conventions (match repo reality)
-- Use `shell: bash` explicitly where needed (Windows runners still support bash steps in this repo).
+- Use `shell: bash` explicitly where needed (match the workflows already present in this repo with bash steps on Windows runners).
 - Use `working-directory: builder*` and run stages as the workflows already do:
   `bash stage1.sh`, `bash stage2.sh`, `bash stage3.sh`
 

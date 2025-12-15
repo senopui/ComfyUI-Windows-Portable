@@ -4,6 +4,10 @@ applyTo: "builder*/**"
 
 # Builder scripts (builder*/)
 
+## Where to look first
+- Stage scripts: `stage1.sh` (dependencies), `stage2.sh` (repos/custom nodes), `stage3.sh` (packaging)
+- Follow patterns already present in the target builder directory
+
 ## Non-breaking rules
 - Preserve portability (embedded Python, in-tree tools). No global installs.
 - Keep behavior consistent with the existing stage scripts (`stage1.sh`, `stage2.sh`, `stage3.sh`).
@@ -14,7 +18,8 @@ applyTo: "builder*/**"
 - Don't introduce new repo-wide env assumptions; use the script's existing `workdir=$(pwd)` patterns.
 
 ## Git clone rules (match repo reality)
-- Custom nodes commonly use shallow clones (`--depth=1 --no-tags --recurse-submodules --shallow-submodules`) via the existing `gcs` pattern.
+- Custom nodes commonly use shallow clones (`--depth=1 --no-tags --recurse-submodules --shallow-submodules`).
+- All builder scripts define a `gcs` helper variable for this pattern in stage2.sh.
 - **Do not force `--no-tags` for ComfyUI in stable builds** where the script uses tags to select latest `v*` tag (builder-cu128 does this).
 
 ## Pip/requirements rules

@@ -8,6 +8,10 @@ infer: true
 
 # Packaging Expert Agent
 
+## Where to look first
+- Stage scripts: `builder*/stage1.sh` (dependencies), `builder*/stage3.sh` (packaging/7z)
+- Dependency files: `builder*/pak*.txt` for package lists
+
 ## Focus
 Portable build maintenance, embedded Python, dependency wheels, and archive creation.
 

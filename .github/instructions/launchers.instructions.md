@@ -4,6 +4,10 @@ applyTo: "builder*/attachments/**/*.bat"
 
 # Launcher batch files (builder*/attachments/**/*.bat)
 
+## Where to look first
+- Existing launcher patterns in `builder-cu130/attachments/ExtraScripts/*.bat`
+- Main launchers: `run_nvidia_gpu.bat`, `run_cpu.bat`, and specialized variants
+
 ## Portability rules
 - Use `%~dp0` for portable-relative paths (never absolute paths).
 - Use `setlocal` / `endlocal`.

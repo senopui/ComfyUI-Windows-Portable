@@ -8,6 +8,10 @@ infer: true
 
 # Workflow Author Agent
 
+## Where to look first
+- Existing workflows in `.github/workflows/`: build-cu128.yml, build-cu130.yml, build-cu130-nightly.yml
+- Follow patterns already present in these workflow files
+
 ## Focus
 GitHub Actions workflows for stable and nightly builds.
 
