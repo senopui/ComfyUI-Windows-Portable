@@ -1,0 +1,67 @@
+name: "Copilot Setup Steps"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/copilot-setup-steps.yml'
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install lightweight tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            jq \
+            unzip \
+            zip \
+            p7zip-full \
+            rsync \
+            dos2unix \
+            shellcheck
+
+      - name: Sanity checks (informational)
+        run: |
+          set +e  # Allow steps to fail without stopping the job
+
+          echo "=== Version Information ==="
+          echo "Bash version:"
+          bash --version | head -1
+
+          echo -e "\nGit version:"
+          git --version
+
+          echo -e "\n7z version:"
+          7z | head -3
+
+          echo -e "\nShellcheck version:"
+          shellcheck --version | head -2
+
+          echo -e "\n=== Syntax Check builder scripts ==="
+          for script in builder*/stage*.sh; do
+            if [ -f "$script" ]; then
+              echo "Checking syntax: $script"
+              bash -n "$script" && echo "  ✓ Syntax OK" || \
+                echo "  ✗ Syntax error"
+            fi
+          done
+
+          echo -e "\n=== ShellCheck linting (warnings allowed) ==="
+          for script in builder*/stage*.sh; do
+            if [ -f "$script" ]; then
+              echo "Linting: $script"
+              shellcheck "$script" || \
+                echo "  → Warnings/errors found (non-fatal)"
+            fi
+          done
+
+          exit 0  # Always succeed for informational checks
