@@ -50,15 +50,15 @@ _(Merge metadata references: `git log --oneline --merges` and `git show --stat -
 
 ## 5) Functional Workflow Fixture
 - Fixture: `tests/workflows/minimal_text2img.json` (Checkpoint → TextEncode ± → EmptyLatent → KSampler → VAE → SaveImage).【F:tests/workflows/minimal_text2img.json†L1-L43】
-- Validator: `scripts/qa_validate_workflow.py` checks JSON structure and (optionally) node registry; `--structure-only` passes in this environment.【F:scripts/qa_validate_workflow.py†L1-L86】
+- Validator: `scripts/qa_validate_workflow.py` checks JSON structure and (optionally) node registry; `--structure-only` passes in this environment.
 - Command run: `python scripts/qa_validate_workflow.py --structure-only` → PASS.
 
 ## 6) Dependency Correctness Audit
-- **Python**: cu130 nightly dynamically tracks latest 3.13.x; stable/cu130 pins 3.13.11. Both use python-build-standalone (portable, no system Python reliance).【F:builder-cu130/stage1.sh†L13-L35】【F:builder/stage1.sh†L13-L18】
-- **PyTorch**: nightly uses cu130 nightly index; stable uses cu130 release index. Recovery check re-installs nightly if xformers downgrades torch.【F:builder-cu130/pak3.txt†L1-L4】【F:builder/pak3.txt†L1-L6】【F:builder-cu130/stage1.sh†L42-L73】
-- **Performance wheels**: flash-attn/xformers/sageattention/triton-windows/natten/nunchaku/spargeattention installed best-effort from curated sources; CI should allow failures without breaking CPU path.【F:builder-cu130/stage1.sh†L53-L99】
-- **CUDA/ORT**: cu130 nightly includes cupy-cuda13x fallback to cuda12x; stable path temporarily consumes ORT CUDA13 nightly feed then reinstalls final wheel.【F:builder-cu130/stage1.sh†L120-L123】【F:builder/stage1.sh†L31-L35】
-- **Known risks**: cp312 wheels on Python 3.13 (dlib/insightface) likely fail; documented best-effort. Recommend conditional skips for CPU-only runs or replacing with cp313 builds when available.【F:builder-cu130/stage1.sh†L112-L118】
+- **Python**: cu130 nightly dynamically tracks latest 3.13.x; stable/cu130 pins 3.13.11. Both use python-build-standalone (portable, no system Python reliance).
+- **PyTorch**: nightly uses cu130 nightly index; stable uses cu130 release index. Recovery check re-installs nightly if xformers downgrades torch.
+- **Performance wheels**: flash-attn/xformers/sageattention/triton-windows/natten/nunchaku/spargeattention installed best-effort from curated sources; CI should allow failures without breaking CPU path.
+- **CUDA/ORT**: cu130 nightly includes cupy-cuda13x fallback to cuda12x; stable path temporarily consumes ORT CUDA13 nightly feed then reinstalls final wheel.
+- **Known risks**: cp312 wheels on Python 3.13 (dlib/insightface) likely fail; documented best-effort. Recommend conditional skips for CPU-only runs or replacing with cp313 builds when available.
 
 ## 7) Results & Manual QA Guidance
 - **Commands executed**: `actionlint`; `python scripts/qa_validate_workflow.py --structure-only`.
