@@ -19,6 +19,13 @@ jobs:
           working-directory: builder
           run: bash stage2.sh
 
+        - name: Verify portable artifact layout
+          shell: pwsh
+          working-directory: builder
+          run: |
+            Set-ExecutionPolicy Bypass -Scope Process -Force
+            ../scripts/qa_verify_portable_layout.ps1 -PortableRoot "$PWD/ComfyUI_Windows_portable"
+
         - name: QA CPU Smoke Test (portable layout)
           shell: pwsh
           working-directory: builder
