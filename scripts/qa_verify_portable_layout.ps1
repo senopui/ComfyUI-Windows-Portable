@@ -45,8 +45,8 @@ foreach ($check in $checks) {
 }
 
 if ($missing.Count -gt 0) {
-    foreach ($msg in $missing) { Write-Error $msg }
-    exit 1
+    foreach ($msg in $missing) { Write-Host $msg -ForegroundColor Red }
+    throw "Portable layout verification failed: $($missing.Count) required component(s) missing. See above for details."
 }
 
 Write-Host "Portable layout verification passed for $portableRootPath"
