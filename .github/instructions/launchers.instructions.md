@@ -1,8 +1,8 @@
 ---
-applyTo: "builder*/attachments/**/*.bat"
+applyTo: "**/*.bat"
 ---
 
-# Launcher batch files (builder*/attachments/**/*.bat)
+# Launcher batch files (batch launchers)
 
 ## Where to look first
 - Existing launcher patterns in `builder-cu130/attachments/ExtraScripts/*.bat`
