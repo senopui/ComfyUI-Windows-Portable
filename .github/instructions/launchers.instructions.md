@@ -9,7 +9,8 @@ applyTo: "**/*.bat"
 - Main launchers: `run_nvidia_gpu.bat`, `run_cpu.bat`, and specialized variants
 
 ## Portability rules
-- Use `%~dp0` for portable-relative paths (never absolute paths).
+- Use `%~dp0` for portable-relative paths; avoid introducing new absolute paths.
+- Legacy launchers may use system paths (e.g., `"C:\Program Files\Git\bin\bash.exe"`); when possible, prefer in-repo tools like MinGit.
 - Use `setlocal` / `endlocal`.
 - Keep the embedded Python invocation style used in this repo:
   `.\python_standalone\python.exe -s -B <entrypoint> ...`
