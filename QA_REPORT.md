@@ -37,6 +37,13 @@ Root cause: cp1252 encoding on Windows runners could not emit the checkmark (✓
 - Workflow validator prints `Workflow node validation passed.` and exits 0.
 - CUDA nightly build no longer fails on UnicodeEncodeError in Stage 1; proceeds to later stages unless other issues arise.
 
+## Validation Status
+- actionlint: **run** (v1.7.9) – no issues.
+- QA scripts (smoketest, workflow validator): **not run** in this environment because ComfyUI portable root is not present. Commands to execute after build:
+  - `pwsh ./scripts/qa_smoketest_windows.ps1`
+  - `python ./scripts/qa_validate_workflow.py`
+- CodeQL: **not run** (no analyzable language changes in this iteration).
+
 ## Manual QA (Windows 11 + NVIDIA, guidance)
 1. Run `scripts/qa_smoketest_windows.ps1` (expects portable root with python_standalone and ComfyUI).
 2. Launch `run_nvidia_gpu.bat` and confirm web UI loads on port 8188; run a simple workflow (e.g., minimal_text2img.json with a valid checkpoint).
@@ -45,4 +52,4 @@ Root cause: cp1252 encoding on Windows runners could not emit the checkmark (✓
 ## Remaining Risks
 - GPU inference not exercised in CI (Windows runners lack CUDA); manual GPU validation still required.
 - Artifact validation only checks presence of key files, not full runtime.
-- Actionlint/tests not run in this iteration; rerun locally if changes are expanded.
+- QA scripts not yet executed here; run post-build on Windows with assembled portable tree to confirm runtime.
