@@ -21,6 +21,7 @@ Root cause: cp1252 encoding on Windows runners could not emit the checkmark (✓
 
 ## New QA Assets
 - `scripts/qa_smoketest_windows.ps1`: CPU headless smoke test; logs to `<portable>/logs/qa-smoketest.log`; fails on Traceback/import/DLL errors.
+- Optional: set `QA_DISABLE_WINDOWS_STANDALONE=1` to skip the `--windows-standalone-build` flag if running against a non-portable install.
 - `scripts/qa_validate_workflow.py`: Validates node availability for `tests/workflows/minimal_text2img.json`.
 - `tests/workflows/minimal_text2img.json`: Minimal text-to-image workflow fixture for validation.
 - Windows CI smoke test added to `.github/workflows/test-build.yml` (runs `scripts/qa_smoketest_windows.ps1` on `windows-latest`).
