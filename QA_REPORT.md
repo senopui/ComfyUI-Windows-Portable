@@ -23,7 +23,7 @@ Root cause: cp1252 encoding on Windows runners could not emit the checkmark (✓
 - `scripts/qa_smoketest_windows.ps1`: CPU headless smoke test; logs to `<portable>/logs/qa-smoketest.log`; fails on Traceback/import/DLL errors.
 - `scripts/qa_validate_workflow.py`: Validates node availability for `tests/workflows/minimal_text2img.json`.
 - `tests/workflows/minimal_text2img.json`: Minimal text-to-image workflow fixture for validation.
-- Windows CI smoke test added to `.github/workflows/test-build.yml`.
+- Windows CI smoke test added to `.github/workflows/test-build.yml` (runs `scripts/qa_smoketest_windows.ps1` on `windows-latest`).
 
 ## Commands to Run Manually
 - CUDA nightly build: `bash builder-cu130/stage1.sh && bash builder-cu130/stage2.sh && bash builder-cu130/stage3.sh`
