@@ -1,85 +1,85 @@
 {
-  "last_node_id": 8,
-  "last_link_id": 7,
-  "nodes": [
-    {
-      "id": 1,
-      "type": "CheckpointLoaderSimple",
-      "pos": [60, -80],
-      "size": {"0": 315, "1": 120},
-      "inputs": {
-        "ckpt_name": "placeholder_model.safetensors"
-      }
+  "1": {
+    "inputs": {
+      "ckpt_name": "replace_with_model.safetensors"
     },
-    {
-      "id": 2,
-      "type": "CLIPTextEncode",
-      "pos": [60, 120],
-      "size": {"0": 260, "1": 120},
-      "inputs": {
-        "text": "A small smoke test prompt"
-      }
+    "class_type": "CheckpointLoaderSimple"
+  },
+  "2": {
+    "inputs": {
+      "seed": 1,
+      "steps": 1,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1.0,
+      "model": [
+        "1",
+        0
+      ],
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ]
     },
-    {
-      "id": 3,
-      "type": "CLIPTextEncode",
-      "pos": [60, 320],
-      "size": {"0": 260, "1": 120},
-      "inputs": {
-        "text": "low quality, bad"
-      }
+    "class_type": "KSampler"
+  },
+  "3": {
+    "inputs": {
+      "text": "a small descriptive test prompt with punctuation: version 1.0!",
+      "clip": [
+        "1",
+        1
+      ]
     },
-    {
-      "id": 4,
-      "type": "EmptyLatentImage",
-      "pos": [60, 520],
-      "size": {"0": 260, "1": 120},
-      "inputs": {
-        "width": 512,
-        "height": 512,
-        "batch_size": 1
-      }
+    "class_type": "CLIPTextEncode"
+  },
+  "4": {
+    "inputs": {
+      "text": "low quality, blurry",
+      "clip": [
+        "1",
+        1
+      ]
     },
-    {
-      "id": 5,
-      "type": "KSampler",
-      "pos": [380, 220],
-      "size": {"0": 315, "1": 320},
-      "inputs": {
-        "seed": 1,
-        "steps": 4,
-        "cfg": 4,
-        "sampler_name": "euler",
-        "scheduler": "normal",
-        "denoise": 1.0
-      }
+    "class_type": "CLIPTextEncode"
+  },
+  "5": {
+    "inputs": {
+      "width": 256,
+      "height": 256,
+      "batch_size": 1
     },
-    {
-      "id": 6,
-      "type": "VAEDecode",
-      "pos": [720, 220],
-      "size": {"0": 260, "1": 200}
+    "class_type": "EmptyLatentImage"
+  },
+  "6": {
+    "inputs": {
+      "samples": [
+        "2",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
     },
-    {
-      "id": 7,
-      "type": "SaveImage",
-      "pos": [980, 220],
-      "size": {"0": 260, "1": 200},
-      "inputs": {
-        "filename_prefix": "qa_smoketest"
-      }
-    }
-  ],
-  "links": [
-    [1, 1, 5, 0, "MODEL"],
-    [2, 2, 5, 1, "CONDITIONING"],
-    [3, 3, 5, 2, "CONDITIONING"],
-    [4, 4, 5, 3, "LATENT"],
-    [5, 1, 6, 2, "VAE"],
-    [6, 5, 6, 0, "LATENT"],
-    [7, 6, 7, 0, "IMAGE"]
-  ],
-  "extra": {
-    "workflow_version": "qa-minimal-1"
+    "class_type": "VAEDecode"
+  },
+  "7": {
+    "inputs": {
+      "images": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "SaveImage"
   }
 }

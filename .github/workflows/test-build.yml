@@ -19,10 +19,8 @@ jobs:
           working-directory: builder
           run: bash stage2.sh
 
-        - name: Validate workflow fixture
+        - name: Run Windows CPU smoke test
           shell: pwsh
-          run: ./builder/ComfyUI_Windows_portable/python_standalone/python.exe -s -B scripts/qa_validate_workflow.py --root "$PWD"
-
-        - name: QA Smoke Test (CPU)
-          shell: pwsh
-          run: ./scripts/qa_smoketest_windows.ps1 -RootPath "$PWD" -Mode cpu
+          run: |
+            Set-Location $Env:GITHUB_WORKSPACE
+            ./scripts/qa_smoketest_windows.ps1

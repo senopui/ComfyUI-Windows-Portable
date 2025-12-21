@@ -93,27 +93,24 @@ $gcs https://github.com/pythongosssss/ComfyUI-WD14-Tagger.git
 $gcs https://github.com/SLAPaper/ComfyUI-Image-Selector.git
 $gcs https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git
 
-# Legacy (best-effort)
-echo "=== Cloning Legacy nodes (best-effort) ==="
-$gcs https://github.com/Amorano/Jovimetrix.git || echo "WARNING: Failed to clone Jovimetrix"
-$gcs https://github.com/Gourieff/ComfyUI-ReActor.git || echo "WARNING: Failed to clone ComfyUI-ReActor"
-$gcs https://github.com/neverbiasu/ComfyUI-SAM2.git || echo "WARNING: Failed to clone ComfyUI-SAM2"
-$gcs https://github.com/cubiq/ComfyUI_InstantID.git || echo "WARNING: Failed to clone ComfyUI_InstantID"
-$gcs https://github.com/cubiq/PuLID_ComfyUI.git || echo "WARNING: Failed to clone PuLID_ComfyUI"
-$gcs https://github.com/cubiq/ComfyUI_FaceAnalysis.git || echo "WARNING: Failed to clone ComfyUI_FaceAnalysis"
-$gcs https://github.com/akatz-ai/ComfyUI-AKatz-Nodes.git || echo "WARNING: Failed to clone ComfyUI-AKatz-Nodes"
+# To be removed in future
+$gcs https://github.com/cubiq/ComfyUI_essentials.git
+$gcs https://github.com/cubiq/ComfyUI_IPAdapter_plus.git
+$gcs https://github.com/CY-CHENYUE/ComfyUI-Janus-Pro.git
+$gcs https://github.com/FizzleDorf/ComfyUI_FizzNodes.git
+$gcs https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git
 
-# To-be-removed bucket (best-effort)
-echo "=== Cloning To-be-removed nodes (best-effort) ==="
-$gcs https://github.com/cubiq/ComfyUI_essentials.git || echo "WARNING: Failed to clone ComfyUI_essentials"
-$gcs https://github.com/cubiq/ComfyUI_IPAdapter_plus.git || echo "WARNING: Failed to clone ComfyUI_IPAdapter_plus"
-$gcs https://github.com/CY-CHENYUE/ComfyUI-Janus-Pro.git || echo "WARNING: Failed to clone ComfyUI-Janus-Pro"
-$gcs https://github.com/FizzleDorf/ComfyUI_FizzNodes.git || echo "WARNING: Failed to clone ComfyUI_FizzNodes"
-$gcs https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git || echo "WARNING: Failed to clone ComfyUI_Comfyroll_CustomNodes"
+# Legacy
+$gcs https://github.com/Amorano/Jovimetrix.git
+$gcs https://github.com/Gourieff/ComfyUI-ReActor.git
+$gcs https://github.com/neverbiasu/ComfyUI-SAM2.git
+$gcs https://github.com/cubiq/ComfyUI_InstantID.git
+$gcs https://github.com/cubiq/PuLID_ComfyUI.git
+$gcs https://github.com/cubiq/ComfyUI_FaceAnalysis.git
+$gcs https://github.com/akatz-ai/ComfyUI-AKatz-Nodes.git
 
 ################################################################################
 # Copy attachments files (incl. start scripts)
-echo "=== Copying attachments ==="
 cp -rf "$workdir"/attachments/. \
     "$workdir"/ComfyUI_Windows_portable/
 
@@ -121,7 +118,6 @@ du -hd2 "$workdir"/ComfyUI_Windows_portable
 
 ################################################################################
 # TAESD model for image on-the-fly preview
-echo "=== Downloading TAESD decoder ==="
 cd "$workdir"
 $gcs https://github.com/madebyollin/taesd.git
 mkdir -p "$workdir"/ComfyUI_Windows_portable/ComfyUI/models/vae_approx
@@ -130,7 +126,6 @@ cp taesd/*_decoder.pth \
 rm -rf taesd
 
 # Download models for ReActor
-echo "=== Downloading ReActor models ==="
 cd "$workdir"/ComfyUI_Windows_portable/ComfyUI/models
 curl -sSL https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth \
     --create-dirs -o facerestore_models/codeformer-v0.1.0.pth

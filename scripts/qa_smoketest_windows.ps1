@@ -1,103 +1,72 @@
-Param(
-    [string]$RootPath = (Resolve-Path (Join-Path $PSScriptRoot "..")),
-    [ValidateSet("cpu", "gpu")]
-    [string]$Mode = "cpu",
-    [switch]$ExpectGpu
-)
-
 $ErrorActionPreference = "Stop"
-Set-StrictMode -Version Latest
 
-function Resolve-PortableRoot {
-    param([string]$Base)
-    $direct = Join-Path $Base "ComfyUI_Windows_portable"
-    $nested = Join-Path $Base "builder/ComfyUI_Windows_portable"
-    if (Test-Path $direct) { return (Resolve-Path $direct) }
-    if (Test-Path $nested) { return (Resolve-Path $nested) }
-    throw "ComfyUI_Windows_portable not found under $Base"
-}
-
-$root = Resolve-Path $RootPath
-$portableRoot = Resolve-PortableRoot -Base $root
-$pythonExe = Join-Path $portableRoot "python_standalone/python.exe"
-$comfyMain = Join-Path $portableRoot "ComfyUI/main.py"
-$logPath = Join-Path $portableRoot "qa_smoketest.log"
-
-Write-Host "RootPath: $root"
-Write-Host "Portable root: $portableRoot"
-Write-Host "Python: $pythonExe"
-
-if (-not (Test-Path $pythonExe)) { throw "python_standalone not found at $pythonExe" }
-if (-not (Test-Path $comfyMain)) { throw "ComfyUI main missing at $comfyMain" }
-
-function Run-Py {
-    param(
-        [string[]]$Args,
-        [int]$TimeoutSeconds = 600
+function Find-PortableRoot {
+    param([string]$Start)
+    $candidates = @(
+        $Start,
+        (Join-Path $Start "ComfyUI_Windows_portable"),
+        (Join-Path $Start "builder" "ComfyUI_Windows_portable"),
+        (Join-Path $Start "builder-cu130" "ComfyUI_Windows_portable"),
+        (Join-Path $Start "builder-cu128" "ComfyUI_Windows_portable")
     )
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = $pythonExe
-    foreach ($a in $Args) { [void]$psi.ArgumentList.Add($a) }
-    if ($psi.ArgumentList.Count -eq 0 -and $Args.Count -gt 0) {
-        $psi.Arguments = ($Args -join ' ')
+    foreach ($c in $candidates) {
+        if (Test-Path (Join-Path $c "python_standalone" "python.exe") -PathType Leaf -ErrorAction SilentlyContinue) {
+            return (Get-Item $c)
+        }
     }
-    $psi.RedirectStandardOutput = $true
-    $psi.RedirectStandardError = $true
-    $psi.UseShellExecute = $false
-    $psi.WorkingDirectory = $portableRoot
-    $proc = [System.Diagnostics.Process]::Start($psi)
-    $timedOut = -not $proc.WaitForExit($TimeoutSeconds * 1000)
-    if ($timedOut) {
-        try { $proc.Kill() } catch {}
-        $proc.WaitForExit()
-    }
-    $stdout = $proc.StandardOutput.ReadToEnd()
-    $stderr = $proc.StandardError.ReadToEnd()
-    $rc = if ($timedOut) { 124 } else { $proc.ExitCode }
-    return @{ code = $rc; out = $stdout; err = $stderr; timeout = $timedOut }
+    throw "Could not locate ComfyUI portable root."
 }
 
-# CUDA detection (best effort)
-$gpuCheck = Run-Py -Args @("-s", "-c", @"
+function Assert-NoLogFailures {
+    param([string]$LogPath)
+    $patterns = @("Traceback", "ImportError", "ModuleNotFoundError", "DLL load failed", "OSError")
+    foreach ($p in $patterns) {
+        if (Select-String -Path $LogPath -Pattern $p -SimpleMatch -Quiet) {
+            throw "Detected '$p' in log $LogPath"
+        }
+    }
+}
+
+$repoRoot = (Split-Path -Parent $PSScriptRoot)
+$portableRoot = Find-PortableRoot -Start $repoRoot
+
+$env:HF_HUB_CACHE = Join-Path $portableRoot "hf_cache"
+$env:TORCH_HOME = Join-Path $portableRoot "torch_cache"
+$env:PYTHONPYCACHEPREFIX = Join-Path $portableRoot "pycache"
+$env:PATH = ($env:PATH + ";" + (Join-Path $portableRoot "MinGit" "cmd") + ";" + (Join-Path $portableRoot "python_standalone" "Scripts"))
+
+$python = Join-Path $portableRoot "python_standalone" "python.exe"
+$mainPy = Join-Path $portableRoot "ComfyUI" "main.py"
+# Allow disabling the standalone flag for environments that do not use the portable launcher (set QA_DISABLE_WINDOWS_STANDALONE=1|true)
+$disableStandalone = $env:QA_DISABLE_WINDOWS_STANDALONE
+$extraArgs = if ($disableStandalone -in @("1", "true", "TRUE")) { "" } else { "--windows-standalone-build" }
+
+if (-not (Test-Path $python)) { throw "python.exe not found at $python" }
+if (-not (Test-Path $mainPy)) { throw "ComfyUI main.py not found at $mainPy" }
+
+$logsDir = Join-Path $portableRoot "logs"
+New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+$logPath = Join-Path $logsDir "qa-smoketest.log"
+
+Write-Host "Portable root: $portableRoot"
+Write-Host "Log: $logPath"
+
+$infoScript = @"
 import torch
-print(f'torch: {getattr(torch, "__version__", "unknown")}')
-print(f'cuda_available: {torch.cuda.is_available()}')
-print(f'device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none"}')
-"@)
-Write-Host $gpuCheck.out.Trim()
-if ($gpuCheck.code -ne 0) {
-    Write-Error "Torch probe failed (exit $($gpuCheck.code)). stderr: $($gpuCheck.err)"
-    exit $gpuCheck.code
-}
-if ($ExpectGpu -and ($gpuCheck.out -notmatch "cuda_available: True")) {
-    Write-Error "GPU mode expected but torch.cuda.is_available() is False"
-    exit 2
+print(f"torch version: {torch.__version__}")
+print(f"cuda available: {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    print(f"cuda devices: {torch.cuda.get_device_name(0)}")
+"@
+& $python -c $infoScript
+
+& $python -s -B $mainPy --quick-test-for-ci --cpu $extraArgs *> $logPath
+$exitCode = $LASTEXITCODE
+if ($exitCode -ne 0) {
+    Get-Content $logPath | Write-Host
+    throw "Smoke test exited with code $exitCode"
 }
 
-# Quick test (CPU or GPU based on mode)
-$modeArgs = if ($Mode -eq "gpu") { @("--cuda-device", "0") } else { @("--cpu") }
-$run = Run-Py -Args (@("-s", "-B", $comfyMain, "--quick-test-for-ci") + $modeArgs)
-[IO.File]::WriteAllText($logPath, $run.out + "`n`nSTDERR:`n" + $run.err)
-Write-Host $run.out
-if ($run.timeout) {
-    Write-Error "Quick-test timed out. See $logPath"
-    exit 124
-}
-if ($run.code -ne 0) {
-    Write-Error "Quick-test failed (exit $($run.code)). See $logPath"
-    exit $run.code
-}
+Assert-NoLogFailures -LogPath $logPath
 
-if (
-    $run.out -match "Traceback" -or
-    $run.err -match "Traceback" -or
-    $run.err -match "ImportError" -or
-    $run.err -match "ModuleNotFoundError" -or
-    $run.out -match "ModuleNotFoundError"
-) {
-    Write-Error "Traceback detected during smoke test. See $logPath"
-    exit 3
-}
-
-Write-Host "Smoke test succeeded. Logs: $logPath"
-exit 0
+Write-Host "Smoke test passed. See log at $logPath"
