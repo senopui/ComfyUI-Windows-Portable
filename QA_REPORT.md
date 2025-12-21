@@ -39,13 +39,13 @@ Root cause: cp1252 encoding on Windows runners could not emit the checkmark (✓
 
 ## Validation Status
 - actionlint: **run** (v1.7.9) – no issues.
-- QA scripts (smoketest, workflow validator): **not run** in this environment because ComfyUI portable root is not present. Commands to execute after build:
+- QA scripts (smoketest, workflow validator): **not run** in this environment because ComfyUI portable tree is not present. Commands to execute after build:
   - `pwsh ./scripts/qa_smoketest_windows.ps1`
   - `python ./scripts/qa_validate_workflow.py`
-- CodeQL: **not run** (no analyzable language changes in this iteration).
+- CodeQL: **not run** (current configuration did not detect analyzable language changes; rerun when supported-language code changes are present).
 
 ## Manual QA (Windows 11 + NVIDIA, guidance)
-1. Run `scripts/qa_smoketest_windows.ps1` (expects portable root with python_standalone and ComfyUI).
+1. Run `scripts/qa_smoketest_windows.ps1` (expects ComfyUI portable tree with python_standalone and ComfyUI).
 2. Launch `run_nvidia_gpu.bat` and confirm web UI loads on port 8188; run a simple workflow (e.g., minimal_text2img.json with a valid checkpoint).
 3. Check `logs/` for absence of Tracebacks.
 
