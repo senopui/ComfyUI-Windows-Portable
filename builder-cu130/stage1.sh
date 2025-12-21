@@ -163,7 +163,7 @@ echo "Checking numpy and opencv versions:"
 "$workdir"/python_standalone/python.exe -c "import numpy, cv2; print(f'numpy: {numpy.__version__}'); print(f'opencv: {cv2.__version__}')" || echo "WARNING: Could not query numpy/opencv versions"
 echo "---"
 echo "Verifying final torch version is cu130 nightly:"
-"$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'ERROR: torch is {torch.__version__}, expected cu130 nightly'; print('✓ PyTorch cu130 nightly verified')" || {
+"$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'ERROR: torch is {torch.__version__}, expected cu130 nightly'; print('[OK] PyTorch cu130 nightly verified')" || {
     echo "ERROR: Final torch version verification failed!"
     echo "This build requires PyTorch nightly cu130 but found a different version."
     exit 1
