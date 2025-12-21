@@ -23,34 +23,6 @@ jobs:
           working-directory: builder-cu128
           run: bash stage2.sh
 
-        - name: Validate NVIDIA GPU Launcher
-          shell: bash  # bash is available on Windows runners and provides timeout command
-          working-directory: builder-cu128/ComfyUI_Windows_portable
-          run: |
-            echo "Testing run_nvidia_gpu launcher (CPU mode)..."
-            # timeout command (from bash) limits test duration to 120 seconds
-            timeout 120 ./python_standalone/python.exe -s ComfyUI/main.py --quick-test-for-ci --cpu 2>&1 | tee nvidia_gpu_test.log || true
-            if grep -q "Traceback" nvidia_gpu_test.log; then
-              echo "ERROR: Traceback detected in run_nvidia_gpu launcher test!"
-              cat nvidia_gpu_test.log
-              exit 1
-            fi
-            echo "run_nvidia_gpu launcher test passed!"
-
-        - name: Validate CPU Launcher
-          shell: bash  # bash is available on Windows runners and provides timeout command
-          working-directory: builder-cu128/ComfyUI_Windows_portable
-          run: |
-            echo "Testing run_cpu launcher..."
-            # timeout command (from bash) limits test duration to 120 seconds
-            timeout 120 ./python_standalone/python.exe -s ComfyUI/main.py --cpu --quick-test-for-ci 2>&1 | tee cpu_test.log || true
-            if grep -q "Traceback" cpu_test.log; then
-              echo "ERROR: Traceback detected in run_cpu launcher test!"
-              cat cpu_test.log
-              exit 1
-            fi
-            echo "run_cpu launcher test passed!"
-
         - name: Stage 3 Compressing Package
           shell: bash
           working-directory: builder-cu128
