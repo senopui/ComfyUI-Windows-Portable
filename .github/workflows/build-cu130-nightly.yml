@@ -8,6 +8,8 @@ on:
 
 jobs:
   build_upload:
+    env:
+        PORTABLE_ROOT: ComfyUI_Windows_portable
     permissions:
         contents: "write"
         packages: "write"
@@ -63,8 +65,7 @@ jobs:
           shell: bash
           working-directory: builder-cu130
           run: |
-            # builder-cu130/stage2.sh always assembles into this portable root
-            root="ComfyUI_Windows_portable"
+            root="${PORTABLE_ROOT}"
             python_exe="$root/python_standalone/python.exe"
             main_py="$root/ComfyUI/main.py"
             gpu_launcher="$root/run_nvidia_gpu.bat"
