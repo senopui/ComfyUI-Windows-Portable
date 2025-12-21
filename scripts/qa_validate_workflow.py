@@ -1,81 +1,60 @@
-#!/usr/bin/env python
-import argparse
+from __future__ import annotations
+
 import json
 import sys
 from pathlib import Path
 
 
-def resolve_portable_root(base: Path) -> Path:
-    """Return the portable root containing ComfyUI_Windows_portable."""
-    direct = base / "ComfyUI_Windows_portable"
-    nested = base / "builder" / "ComfyUI_Windows_portable"
-    if direct.is_dir():
-        return direct
-    if nested.is_dir():
-        return nested
-    raise SystemExit(f"ComfyUI_Windows_portable not found under {base}")
+def find_portable_root(start: Path) -> Path:
+    candidates = [
+        start,
+        start / "ComfyUI_Windows_portable",
+        start / "builder" / "ComfyUI_Windows_portable",
+        start / "builder-cu130" / "ComfyUI_Windows_portable",
+        start / "builder-cu128" / "ComfyUI_Windows_portable",
+    ]
+    for c in candidates:
+        if (c / "ComfyUI").is_dir():
+            return c
+    raise SystemExit("Could not locate ComfyUI portable root")
 
 
-def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Validate minimal workflow fixture")
-    parser.add_argument(
-        "--root",
-        type=Path,
-        default=Path(__file__).resolve().parent.parent,
-        help="Repository root or extracted package root",
+def load_registry(portable_root: Path) -> set[str]:
+    sys.path.insert(0, str(portable_root / "ComfyUI"))
+    import nodes  # type: ignore
+
+    registry = set(nodes.NODE_CLASS_MAPPINGS.keys()) | set(
+        nodes.NODE_DISPLAY_NAME_MAPPINGS.keys()
     )
-    parser.add_argument(
-        "--workflow",
-        type=Path,
-        default=None,
-        help="Path to workflow JSON (defaults to tests/workflows/minimal_text2img.json)",
-    )
-    args = parser.parse_args(argv)
+    return registry
 
-    repo_root = args.root.resolve()
-    portable_root = resolve_portable_root(repo_root)
 
-    workflow_path = (
-        args.workflow
-        if args.workflow
-        else repo_root / "tests" / "workflows" / "minimal_text2img.json"
-    )
-    workflow_path = workflow_path.resolve()
-    if not workflow_path.is_file():
-        raise SystemExit(f"Workflow file not found: {workflow_path}")
+def main() -> int:
+    repo_root = Path(__file__).resolve().parents[1]
+    portable_root = find_portable_root(repo_root)
+    registry = load_registry(portable_root)
 
-    try:
-        data = json.loads(workflow_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"Invalid JSON in workflow: {exc}") from exc
+    workflow_path = repo_root / "tests" / "workflows" / "minimal_text2img.json"
+    data = json.loads(workflow_path.read_text(encoding="utf-8"))
 
-    nodes = data.get("nodes") or []
-    if not nodes:
-        raise SystemExit("Workflow has no nodes")
+    missing: list[str] = []
+    for node_id, node_data in data.items():
+        class_type = node_data.get("class_type")
+        if class_type is None:
+            missing.append(f"{node_id}: missing class_type")
+            continue
+        if class_type not in registry:
+            missing.append(f"{node_id}: {class_type}")
 
-    node_types = {node.get("type") for node in nodes}
-    required = {
-        "CheckpointLoaderSimple",
-        "CLIPTextEncode",
-        "EmptyLatentImage",
-        "KSampler",
-        "VAEDecode",
-    }
-
-    missing = sorted(required - node_types)
     if missing:
-        raise SystemExit(f"Missing required node types: {', '.join(missing)}")
+        print("Missing or unknown nodes:")
+        for m in missing:
+            print(f" - {m}")
+        return 1
 
-    comfy_path = portable_root / "ComfyUI"
-    if not comfy_path.is_dir():
-        raise SystemExit(f"ComfyUI directory missing under {portable_root}")
-
-    print("✓ Workflow JSON is readable")
-    print(f"✓ Workflow path: {workflow_path}")
-    print(f"✓ Portable root: {portable_root}")
-    print(f"✓ Required nodes present: {', '.join(sorted(required))}")
+    print("Workflow node validation passed.")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    raise SystemExit(main())

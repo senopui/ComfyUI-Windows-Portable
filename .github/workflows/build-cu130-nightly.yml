@@ -59,6 +59,27 @@ jobs:
           working-directory: builder-cu130
           run: bash stage3.sh
 
+        - name: Validate packaged artifact layout
+          shell: bash
+          working-directory: builder-cu130
+          run: |
+            root="ComfyUI_Windows_portable"
+            python_exe="$root/python_standalone/python.exe"
+            main_py="$root/ComfyUI/main.py"
+            gpu_launcher="$root/run_nvidia_gpu.bat"
+            cpu_launcher="$root/run_cpu.bat"
+            if [ ! -d "$root" ]; then
+              echo "ERROR: expected portable root at $root"
+              exit 1
+            fi
+            for path in "$python_exe" "$main_py" "$gpu_launcher" "$cpu_launcher"; do
+              if [ ! -f "$path" ]; then
+                echo "ERROR: missing required artifact: $path"
+                exit 1
+              fi
+            done
+            echo "Artifact layout validated."
+
         - name: Upload archive to release
           uses: xresloader/upload-to-github-release@v1
           env:

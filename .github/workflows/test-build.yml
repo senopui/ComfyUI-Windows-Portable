@@ -18,3 +18,9 @@ jobs:
           shell: bash
           working-directory: builder
           run: bash stage2.sh
+
+        - name: Run Windows CPU smoke test
+          shell: pwsh
+          run: |
+            Set-Location $Env:GITHUB_WORKSPACE
+            ./scripts/qa_smoketest_windows.ps1
