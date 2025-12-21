@@ -37,6 +37,7 @@ $env:PATH = ($env:PATH + ";" + (Join-Path $portableRoot "MinGit" "cmd") + ";" + 
 
 $python = Join-Path $portableRoot "python_standalone" "python.exe"
 $mainPy = Join-Path $portableRoot "ComfyUI" "main.py"
+$extraArgs = if ($env:QA_DISABLE_WINDOWS_STANDALONE -eq "1") { "" } else { "--windows-standalone-build" }
 
 if (-not (Test-Path $python)) { throw "python.exe not found at $python" }
 if (-not (Test-Path $mainPy)) { throw "ComfyUI main.py not found at $mainPy" }
@@ -56,7 +57,7 @@ if torch.cuda.is_available():
     print(f"cuda devices: {torch.cuda.get_device_name(0)}")
 PYINFO
 
-& $python -s -B $mainPy --quick-test-for-ci --cpu --windows-standalone-build *> $logPath
+& $python -s -B $mainPy --quick-test-for-ci --cpu $extraArgs *> $logPath
 $exitCode = $LASTEXITCODE
 if ($exitCode -ne 0) {
     Get-Content $logPath | Write-Host

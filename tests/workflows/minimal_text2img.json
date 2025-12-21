@@ -34,7 +34,7 @@
   },
   "3": {
     "inputs": {
-      "text": "a tiny test prompt",
+      "text": "a small descriptive test prompt with punctuation: version 1.0!",
       "clip": [
         "1",
         1
@@ -44,7 +44,7 @@
   },
   "4": {
     "inputs": {
-      "text": "",
+      "text": "low quality, blurry",
       "clip": [
         "1",
         1
@@ -54,8 +54,8 @@
   },
   "5": {
     "inputs": {
-      "width": 64,
-      "height": 64,
+      "width": 256,
+      "height": 256,
       "batch_size": 1
     },
     "class_type": "EmptyLatentImage"
