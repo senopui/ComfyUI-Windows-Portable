@@ -63,6 +63,7 @@ jobs:
           shell: bash
           working-directory: builder-cu130
           run: |
+            # builder-cu130/stage2.sh always assembles into this portable root
             root="ComfyUI_Windows_portable"
             python_exe="$root/python_standalone/python.exe"
             main_py="$root/ComfyUI/main.py"

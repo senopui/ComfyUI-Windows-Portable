@@ -49,13 +49,14 @@ $logPath = Join-Path $logsDir "qa-smoketest.log"
 Write-Host "Portable root: $portableRoot"
 Write-Host "Log: $logPath"
 
-& $python - <<'PYINFO'
+$infoScript = @"
 import torch
 print(f"torch version: {torch.__version__}")
 print(f"cuda available: {torch.cuda.is_available()}")
 if torch.cuda.is_available():
     print(f"cuda devices: {torch.cuda.get_device_name(0)}")
-PYINFO
+"@
+& $python -c $infoScript
 
 & $python -s -B $mainPy --quick-test-for-ci --cpu $extraArgs *> $logPath
 $exitCode = $LASTEXITCODE

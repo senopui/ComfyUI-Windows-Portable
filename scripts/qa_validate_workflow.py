@@ -23,7 +23,7 @@ def load_registry(portable_root: Path) -> set[str]:
     sys.path.insert(0, str(portable_root / "ComfyUI"))
     try:
         import nodes  # type: ignore
-    except Exception as exc:  # pragma: no cover - runtime guard
+    except (ImportError, ModuleNotFoundError) as exc:  # pragma: no cover - runtime guard
         raise SystemExit(f"Failed to import ComfyUI nodes: {exc}") from exc
 
     registry = set(nodes.NODE_CLASS_MAPPINGS.keys()) | set(

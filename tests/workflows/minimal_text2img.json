@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "ckpt_name": "placeholder.safetensors"
+      "ckpt_name": "replace_with_model.safetensors"
     },
     "class_type": "CheckpointLoaderSimple"
   },
