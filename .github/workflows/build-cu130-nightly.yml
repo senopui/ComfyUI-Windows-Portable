@@ -66,15 +66,17 @@ jobs:
           working-directory: builder-cu130
           run: |
             root="${PORTABLE_ROOT}"
-            python_exe="$root/python_standalone/python.exe"
-            main_py="$root/ComfyUI/main.py"
-            gpu_launcher="$root/run_nvidia_gpu.bat"
-            cpu_launcher="$root/run_cpu.bat"
             if [ ! -d "$root" ]; then
               echo "ERROR: expected portable root at $root"
               exit 1
             fi
-            for path in "$python_exe" "$main_py" "$gpu_launcher" "$cpu_launcher"; do
+            required_paths=(
+              "$root/python_standalone/python.exe"
+              "$root/ComfyUI/main.py"
+              "$root/run_nvidia_gpu.bat"
+              "$root/run_cpu.bat"
+            )
+            for path in "${required_paths[@]}"; do
               if [ ! -f "$path" ]; then
                 echo "ERROR: missing required artifact: $path"
                 exit 1

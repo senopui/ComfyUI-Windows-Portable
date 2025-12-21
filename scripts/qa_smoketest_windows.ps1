@@ -37,8 +37,9 @@ $env:PATH = ($env:PATH + ";" + (Join-Path $portableRoot "MinGit" "cmd") + ";" + 
 
 $python = Join-Path $portableRoot "python_standalone" "python.exe"
 $mainPy = Join-Path $portableRoot "ComfyUI" "main.py"
-# Allow disabling the standalone flag for environments that do not use the portable launcher
-$extraArgs = if ($env:QA_DISABLE_WINDOWS_STANDALONE -eq "1") { "" } else { "--windows-standalone-build" }
+# Allow disabling the standalone flag for environments that do not use the portable launcher (set QA_DISABLE_WINDOWS_STANDALONE=1|true)
+$disableStandalone = $env:QA_DISABLE_WINDOWS_STANDALONE
+$extraArgs = if ($disableStandalone -in @("1", "true", "TRUE")) { "" } else { "--windows-standalone-build" }
 
 if (-not (Test-Path $python)) { throw "python.exe not found at $python" }
 if (-not (Test-Path $mainPy)) { throw "ComfyUI main.py not found at $mainPy" }
