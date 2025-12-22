@@ -4,7 +4,7 @@
 
 ### What You Get
 - **Python 3.13** + **PyTorch Nightly (2.10+)** + **CUDA 13.0**
-- Latest xformers, FlashAttention, SageAttention, NATTEN
+- Performance wheels best-effort (FlashAttention, SageAttention, NATTEN; xformers skipped until compatible cp313/cu130 wheels exist)
 - ComfyUI master branch (bleeding edge)
 - Two specialized launcher modes
 

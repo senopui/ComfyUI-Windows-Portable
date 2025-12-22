@@ -36,6 +36,9 @@ mv python python_standalone
 echo "=== Installing pip, wheel, setuptools ==="
 $pip_exe install --upgrade pip wheel setuptools
 
+echo "=== Installing audioop-lts for Python 3.13 compatibility (pinned) ==="
+$pip_exe install --only-binary=:all: "audioop-lts==0.2.1" || echo "WARNING: audioop-lts install failed (required for pydub on Python 3.13)"
+
 echo "=== Installing pak2.txt (build tools) ==="
 $pip_exe install -r "$workdir"/pak2.txt
 
