@@ -4,7 +4,7 @@ setlocal
 @REM Optimized High Fidelity Mode - Balances quality with performance
 @REM - Enables xformers for optimized attention (when available)
 @REM - Enables smart memory management
-@REM - FlashAttention used when available (faster and still high quality)
+@REM - Enables FlashAttention when available (faster and still high quality)
 @REM - Default port 8188 (compatible with character_select_stand_alone_app_test)
 
 @REM If you don't want the browser to open automatically, add [ --disable-auto-launch ] after the last argument.
