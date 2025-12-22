@@ -52,13 +52,15 @@ echo "=== Verifying PyTorch installation ==="
 
 # Guarded install: flash-attn via AI-windows-whl
 # flash-attn requires torch to be installed first (imports torch during build)
+# Use --only-binary to prevent PEP517 source builds which fail without torch in isolation
 echo "=== Attempting flash-attn from AI-windows-whl ==="
-$pip_exe install flash-attn --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn install failed (may not be available for cp313/torch-nightly)"
+$pip_exe install flash-attn --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn wheel not available for cp313/torch-nightly (skipping)"
 
 # Guarded install: xformers via AI-windows-whl
 # Install xformers normally first to get all dependencies, then check if torch was downgraded
+# Use --only-binary to avoid building from source (avoids mismatched torch/python versions)
 echo "=== Attempting xformers from AI-windows-whl ==="
-$pip_exe install xformers --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers install failed (may not be available for cp313/torch-nightly)"
+$pip_exe install xformers --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers wheel not available for cp313/torch-nightly (skipping)"
 
 # Verify torch nightly is still installed after xformers (not downgraded)
 echo "=== Verifying PyTorch version after xformers install ==="

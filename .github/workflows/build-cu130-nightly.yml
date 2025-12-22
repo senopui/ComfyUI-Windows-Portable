@@ -34,7 +34,7 @@ jobs:
           run: |
             echo "Testing maximum fidelity mode (disable xformers, smart memory, and FlashAttention)..."
             # timeout command (from bash) limits test duration to 120 seconds
-            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --disable-flash-attention --quick-test-for-ci 2>&1 | tee maximum_fidelity_test.log || true
+            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --quick-test-for-ci 2>&1 | tee maximum_fidelity_test.log || true
             # Check if log file was created
             if [ ! -f maximum_fidelity_test.log ]; then
               echo "ERROR: Log file was not created!"
@@ -42,6 +42,11 @@ jobs:
             fi
             if grep -q "Traceback" maximum_fidelity_test.log; then
               echo "ERROR: Traceback detected in maximum fidelity launcher test!"
+              cat maximum_fidelity_test.log
+              exit 1
+            fi
+            if grep -q "unrecognized arguments" maximum_fidelity_test.log; then
+              echo "ERROR: Unrecognized arguments detected in maximum fidelity launcher test!"
               cat maximum_fidelity_test.log
               exit 1
             fi
@@ -53,8 +58,8 @@ jobs:
           run: |
             echo "Testing optimized fidelity mode (default launcher arguments)..."
             # timeout command (from bash) limits test duration to 120 seconds
-            # Note: Must disable xformers/flash-attn when testing with --cpu as they require CUDA
-            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --disable-flash-attention --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log || true
+            # Note: Must disable xformers when testing with --cpu as it requires CUDA
+            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log || true
             # Check if log file was created
             if [ ! -f optimized_fidelity_test.log ]; then
               echo "ERROR: Log file was not created!"
@@ -62,6 +67,11 @@ jobs:
             fi
             if grep -q "Traceback" optimized_fidelity_test.log; then
               echo "ERROR: Traceback detected in optimized fidelity launcher test!"
+              cat optimized_fidelity_test.log
+              exit 1
+            fi
+            if grep -q "unrecognized arguments" optimized_fidelity_test.log; then
+              echo "ERROR: Unrecognized arguments detected in optimized fidelity launcher test!"
               cat optimized_fidelity_test.log
               exit 1
             fi

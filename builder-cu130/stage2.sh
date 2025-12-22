@@ -125,6 +125,14 @@ echo "=== Copying attachments ==="
 cp -rf "$workdir"/attachments/. \
     "$workdir"/ComfyUI_Windows_portable/
 
+# Copy legacy launchers (run_nvidia_gpu.bat, run_cpu.bat) to root for backwards compatibility
+# These are expected by downstream tooling and validation
+echo "=== Copying legacy launchers to root ==="
+cp "$workdir"/ComfyUI_Windows_portable/ExtraScripts/run_nvidia_gpu.bat \
+    "$workdir"/ComfyUI_Windows_portable/run_nvidia_gpu.bat
+cp "$workdir"/ComfyUI_Windows_portable/ExtraScripts/run_cpu.bat \
+    "$workdir"/ComfyUI_Windows_portable/run_cpu.bat
+
 du -hd2 "$workdir"/ComfyUI_Windows_portable
 
 ################################################################################
