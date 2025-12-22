@@ -41,7 +41,6 @@ Optimized for maximum image quality and consistency.
 ----
 --disable-xformers
 --disable-smart-memory
---disable-flash-attention
 ----
 
 **Use Cases:**

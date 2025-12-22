@@ -36,6 +36,9 @@ mv python python_standalone
 echo "=== Installing pip, wheel, setuptools ==="
 $pip_exe install --upgrade pip wheel setuptools
 
+echo "=== Installing audioop-lts for Python 3.13 compatibility ==="
+$pip_exe install --only-binary=:all: audioop-lts || echo "WARNING: audioop-lts install failed (required for pydub on Python 3.13)"
+
 echo "=== Installing pak2.txt (build tools) ==="
 $pip_exe install -r "$workdir"/pak2.txt
 
@@ -53,24 +56,10 @@ echo "=== Verifying PyTorch installation ==="
 # Guarded install: flash-attn via AI-windows-whl
 # flash-attn requires torch to be installed first (imports torch during build)
 echo "=== Attempting flash-attn from AI-windows-whl ==="
-$pip_exe install flash-attn --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn install failed (may not be available for cp313/torch-nightly)"
+$pip_exe install --only-binary=:all: flash-attn --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn install failed (wheel likely unavailable for cp313/torch-nightly)"
 
-# Guarded install: xformers via AI-windows-whl
-# Install xformers normally first to get all dependencies, then check if torch was downgraded
-echo "=== Attempting xformers from AI-windows-whl ==="
-$pip_exe install xformers --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers install failed (may not be available for cp313/torch-nightly)"
-
-# Verify torch nightly is still installed after xformers (not downgraded)
-echo "=== Verifying PyTorch version after xformers install ==="
-"$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'torch was downgraded to {torch.__version__}'; print(f'PyTorch {torch.__version__} verified')" || {
-    echo "WARNING: PyTorch version check failed, reinstalling PyTorch nightly"
-    $pip_exe install --force-reinstall --no-deps -r "$workdir"/pak3.txt
-    # Verify recovery reinstall succeeded
-    "$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'torch recovery reinstall failed, got {torch.__version__}'; print(f'PyTorch {torch.__version__} recovery verified')" || {
-        echo "ERROR: PyTorch recovery reinstall failed, aborting build"
-        exit 1
-    }
-}
+# Guarded install: xformers is skipped for cp313 torch-nightly cu130 (no compatible wheels yet)
+echo "=== Skipping xformers install (no compatible cp313 torch-nightly cu130 wheel available) ==="
 
 # Guarded install: sageattention via AI-windows-whl
 echo "=== Attempting sageattention from AI-windows-whl ==="
