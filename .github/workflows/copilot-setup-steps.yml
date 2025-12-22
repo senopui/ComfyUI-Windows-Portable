@@ -50,8 +50,8 @@ jobs:
           shopt -s nullglob
           for script in builder*/stage*.sh; do
             echo "Checking syntax: $script"
-            bash -n "$script" && echo "  ✓ Syntax OK" || \
-              echo "  ✗ Syntax error"
+            bash -n "$script" && echo "  OK Syntax OK" || \
+              echo "  FAIL Syntax error"
           done
           shopt -u nullglob
 

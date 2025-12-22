@@ -9,20 +9,25 @@
 ## CI Failure Evidence (CUDA 13.0 Nightly)
 | Run Date (UTC) | Run ID | Failing Step | Error Excerpt | Failure Class |
 | --- | --- | --- | --- | --- |
-| 2025-12-21 | [20403953035](https://github.com/senopui/ComfyUI-Windows-Portable/actions/runs/20403953035) | Stage 1 Gathering Dependencies | `UnicodeEncodeError: 'charmap' codec can't encode character '\u2713'` during torch nightly verification | Encoding/locale |
-| 2025-12-20 | [20388197571](https://github.com/senopui/ComfyUI-Windows-Portable/actions/runs/20388197571) | Stage 1 Gathering Dependencies | `UnicodeEncodeError: ... '\\u2713'` | Encoding/locale |
-| 2025-12-19 | [20358633634](https://github.com/senopui/ComfyUI-Windows-Portable/actions/runs/20358633634) | Stage 1 Gathering Dependencies | `UnicodeEncodeError: ... '\\u2713'` | Encoding/locale |
+| 2025-12-21 | [20403953035](https://github.com/senopui/ComfyUI-Windows-Portable/actions/runs/20403953035) | Stage 1 Gathering Dependencies | `UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>` during torch nightly verification in `builder-cu130/stage1.sh` line 166 | Encoding/locale |
+| 2025-12-20 | [20388197571](https://github.com/senopui/ComfyUI-Windows-Portable/actions/runs/20388197571) | Stage 1 Gathering Dependencies | `UnicodeEncodeError: 'charmap' codec can't encode character '\\u2713' in position 0: character maps to <undefined>` - Same root cause as above | Encoding/locale |
+| 2025-12-19 | [20358633634](https://github.com/senopui/ComfyUI-Windows-Portable/actions/runs/20358633634) | Stage 1 Gathering Dependencies | `UnicodeEncodeError: 'charmap' codec can't encode character '\\u2713' in position 0: character maps to <undefined>` - Same root cause as above | Encoding/locale |
 
-Root cause: cp1252 encoding on Windows runners could not emit the checkmark (✓) used in torch cu130 nightly assertion logging.
+Root cause: cp1252 encoding on Windows runners could not emit the checkmark (✓) used in torch cu130 nightly assertion logging. The error occurred when Python's print() statement attempted to output the Unicode character U+2713 (✓) to a console using Windows-1252 encoding.
 
 ## Fixes & Hardening
-- Replaced the non-ASCII checkmark in `builder-cu130/stage1.sh` torch cu130 nightly assertion output with plain ASCII text to avoid cp1252 encoding failures.
+- Replaced the non-ASCII checkmark (✓) in `builder-cu130/stage1.sh` torch cu130 nightly assertion output with `[OK]` to avoid cp1252 encoding failures.
+- Replaced non-ASCII checkmarks (✓ and ✗) in `.github/workflows/copilot-setup-steps.yml` with ASCII equivalents (`OK` and `FAIL`).
+- Restored full environment setup (setlocal, PATH, PYTHONPYCACHEPREFIX) in `builder/attachments/ExtraScripts/run_cpu.bat` and `builder-cu128/attachments/ExtraScripts/run_cpu.bat` to ensure custom nodes requiring git can access MinGit.
+- Restored `-B` flag to Python invocations in `builder/attachments/ExtraScripts/run_nvidia_gpu.bat` and `builder-cu128/attachments/ExtraScripts/run_nvidia_gpu.bat` to prevent .pyc file writes.
 - Added artifact layout validation to the CUDA 13 nightly workflow to fail fast if the packaged portable tree is incomplete.
 
 ## New QA Assets
 - `scripts/qa_smoketest_windows.ps1`: CPU headless smoke test; logs to `<portable>/logs/qa-smoketest.log`; fails on Traceback/import/DLL errors.
-- Optional: set `QA_DISABLE_WINDOWS_STANDALONE=1` to skip the `--windows-standalone-build` flag if running against a non-portable install.
+  - **LIMITATION**: This CPU smoke test does NOT validate GPU extension loading (e.g., CUDA, xformers, flash-attention). It only confirms that ComfyUI can start without import errors on CPU mode.
+  - Optional: set `QA_DISABLE_WINDOWS_STANDALONE=1` to skip the `--windows-standalone-build` flag if running against a non-portable install.
 - `scripts/qa_validate_workflow.py`: Validates node availability for `tests/workflows/minimal_text2img.json`.
+  - **LIMITATION**: This validator only checks base ComfyUI nodes present in the core repository. It does NOT validate custom nodes from `custom_nodes/` directory.
 - `tests/workflows/minimal_text2img.json`: Minimal text-to-image workflow fixture for validation.
 - Windows CI smoke test added to `.github/workflows/test-build.yml` (runs `scripts/qa_smoketest_windows.ps1` on `windows-latest`).
 
@@ -37,12 +42,36 @@ Root cause: cp1252 encoding on Windows runners could not emit the checkmark (✓
 - Workflow validator prints `Workflow node validation passed.` and exits 0.
 - CUDA nightly build no longer fails on UnicodeEncodeError in Stage 1; proceeds to later stages unless other issues arise.
 
+## Dependency Versions
+Expected dependency versions for each builder configuration:
+
+### builder-cu130 (CUDA 13.0 Nightly)
+- **Python**: 3.12.x (embedded in `python_standalone/`)
+- **PyTorch**: 2.7.0.dev (nightly) with CUDA 13.0 support (`cu130` in version string)
+- **CUDA Toolkit**: 13.0
+- **Key Performance Libraries**:
+  - xformers (nightly, post-cu130 PyTorch install)
+  - flash-attn (optional, guarded install)
+  - triton (typically included with PyTorch nightly)
+
+### builder-cu128 (CUDA 12.8)
+- **Python**: 3.12.x (embedded in `python_standalone/`)
+- **PyTorch**: Compatible with CUDA 12.8
+- **CUDA Toolkit**: 12.8
+
+### builder (Legacy/CPU)
+- **Python**: 3.12.x (embedded in `python_standalone/`)
+- **PyTorch**: CPU-only build
+
+**Note**: Exact version numbers vary as nightly builds update daily. Stage 1 scripts verify PyTorch CUDA variant post-install. Run `python_standalone/python.exe -m pip list` in built portable tree to see installed versions.
+
 ## Validation Status
-- actionlint: **run** (v1.7.9) – no issues.
-- QA scripts (smoketest, workflow validator): **not run** in this environment because ComfyUI portable tree is not present. Commands to execute after build:
+- **actionlint**: run locally (v1.7.9) – no issues.
+- **QA scripts (smoketest, workflow validator)**: **not run** in this environment because ComfyUI portable tree is not present. Commands to execute after build:
   - `pwsh ./scripts/qa_smoketest_windows.ps1`
   - `python ./scripts/qa_validate_workflow.py`
-- CodeQL: **not run** (current configuration did not detect analyzable language changes; rerun when supported-language code changes are present).
+- **CodeQL**: **not run** (current configuration did not detect analyzable language changes; rerun when supported-language code changes are present).
+- **GPU validation**: **not performed in CI** (Windows runners lack CUDA hardware); manual GPU validation required on physical hardware (see Manual QA section).
 
 ## Manual QA (Windows 11 + NVIDIA, guidance)
 1. Run `scripts/qa_smoketest_windows.ps1` (expects ComfyUI portable tree with python_standalone and ComfyUI).
