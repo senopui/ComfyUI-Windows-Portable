@@ -36,8 +36,8 @@ mv python python_standalone
 echo "=== Installing pip, wheel, setuptools ==="
 $pip_exe install --upgrade pip wheel setuptools
 
-echo "=== Installing audioop-lts for Python 3.13 compatibility ==="
-$pip_exe install --only-binary=:all: audioop-lts || echo "WARNING: audioop-lts install failed (required for pydub on Python 3.13)"
+echo "=== Installing audioop-lts for Python 3.13 compatibility (pinned) ==="
+$pip_exe install --only-binary=:all: "audioop-lts==0.2.1" || echo "WARNING: audioop-lts install failed (required for pydub on Python 3.13)"
 
 echo "=== Installing pak2.txt (build tools) ==="
 $pip_exe install -r "$workdir"/pak2.txt
@@ -55,8 +55,8 @@ echo "=== Verifying PyTorch installation ==="
 
 # Guarded install: flash-attn via AI-windows-whl
 # flash-attn requires torch to be installed first (imports torch during build)
-echo "=== Attempting flash-attn from AI-windows-whl ==="
-$pip_exe install --only-binary=:all: flash-attn --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn install failed (wheel likely unavailable for cp313/torch-nightly)"
+echo "=== Attempting flash-attn from AI-windows-whl (pinned) ==="
+$pip_exe install --only-binary=:all: "flash-attn==2.6.1" --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn install failed (wheel likely unavailable for cp313/torch-nightly)"
 
 # Guarded install: xformers is skipped for cp313 torch-nightly cu130 (no compatible wheels yet)
 echo "=== Skipping xformers install (no compatible cp313 torch-nightly cu130 wheel available) ==="
