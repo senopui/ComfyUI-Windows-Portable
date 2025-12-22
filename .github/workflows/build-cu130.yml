@@ -29,16 +29,24 @@ jobs:
           shell: bash  # bash is available on Windows runners and provides timeout command
           working-directory: builder-cu130/ComfyUI_Windows_portable
           run: |
-            echo "Testing maximum fidelity mode (disable xformers, smart memory, and FlashAttention)..."
+            echo "Testing maximum fidelity mode (disable xformers and smart memory)..."
             # timeout command (from bash) limits test duration to 120 seconds
-            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --disable-flash-attention --quick-test-for-ci 2>&1 | tee maximum_fidelity_test.log || true
+            # Note: --disable-flash-attention is not a valid ComfyUI flag, removed
+            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --quick-test-for-ci 2>&1 | tee maximum_fidelity_test.log || true
             # Check if log file was created
             if [ ! -f maximum_fidelity_test.log ]; then
               echo "ERROR: Log file was not created!"
               exit 1
             fi
+            # Check for Python tracebacks
             if grep -q "Traceback" maximum_fidelity_test.log; then
               echo "ERROR: Traceback detected in maximum fidelity launcher test!"
+              cat maximum_fidelity_test.log
+              exit 1
+            fi
+            # Check for unrecognized arguments errors
+            if grep -q "error: unrecognized arguments:" maximum_fidelity_test.log; then
+              echo "ERROR: Unrecognized arguments detected in maximum fidelity launcher test!"
               cat maximum_fidelity_test.log
               exit 1
             fi
@@ -50,19 +58,62 @@ jobs:
           run: |
             echo "Testing optimized fidelity mode (default launcher arguments)..."
             # timeout command (from bash) limits test duration to 120 seconds
-            # Note: Must disable xformers/flash-attn when testing with --cpu as they require CUDA
-            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --disable-flash-attention --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log || true
+            # Note: Must disable xformers when testing with --cpu as it requires CUDA
+            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log || true
             # Check if log file was created
             if [ ! -f optimized_fidelity_test.log ]; then
               echo "ERROR: Log file was not created!"
               exit 1
             fi
+            # Check for Python tracebacks
             if grep -q "Traceback" optimized_fidelity_test.log; then
               echo "ERROR: Traceback detected in optimized fidelity launcher test!"
               cat optimized_fidelity_test.log
               exit 1
             fi
+            # Check for unrecognized arguments errors
+            if grep -q "error: unrecognized arguments:" optimized_fidelity_test.log; then
+              echo "ERROR: Unrecognized arguments detected in optimized fidelity launcher test!"
+              cat optimized_fidelity_test.log
+              exit 1
+            fi
             echo "Optimized fidelity launcher test passed!"
+
+        - name: Pre-packaging sanity check
+          shell: bash
+          working-directory: builder-cu130
+          run: |
+            echo "=== Verifying packaged artifact structure before compression ==="
+            root="ComfyUI_Windows_portable"
+            if [ ! -d "$root" ]; then
+              echo "ERROR: Portable root directory not found at $root"
+              exit 1
+            fi
+            echo ""
+            echo "=== Top-level files in $root ==="
+            ls -lah "$root"/*.bat "$root"/*.py 2>/dev/null || echo "(No .bat or .py files found in root)"
+            echo ""
+            echo "=== Checking required launcher files ==="
+            required_launchers=(
+              "$root/run_nvidia_gpu.bat"
+              "$root/run_cpu.bat"
+            )
+            missing_launchers=0
+            for launcher in "${required_launchers[@]}"; do
+              if [ -f "$launcher" ]; then
+                echo "✓ Found: $launcher"
+              else
+                echo "✗ MISSING: $launcher"
+                missing_launchers=$((missing_launchers + 1))
+              fi
+            done
+            if [ $missing_launchers -gt 0 ]; then
+              echo ""
+              echo "ERROR: $missing_launchers required launcher(s) missing!"
+              exit 1
+            fi
+            echo ""
+            echo "=== Pre-packaging sanity check PASSED ==="
 
         - name: Stage 3 Compressing Package
           shell: bash
