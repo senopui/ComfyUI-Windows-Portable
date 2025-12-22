@@ -10,26 +10,13 @@ export PIP_NO_WARN_SCRIPT_LOCATION=0
 
 ls -lahF
 
-# Download Python 3.12 Standalone (pinned for audioop compatibility)
+# Download Python 3.12 Standalone (pinned for audioop compatibility and supply-chain security)
 # Python 3.13 removed the audioop module which breaks pydub and some custom nodes
-echo "=== Fetching latest Python 3.12.xx standalone build ==="
-# Get the latest release (not pre-release) and find the Python 3.12.xx download URL
-# 1. Fetch last 10 releases from python-build-standalone
-# 2. Filter out pre-releases (select .prerelease == false)
-# 3. Take the first (most recent) release
-# 4. From that release's assets, find the cpython-3.12.xx install_only tarball for Windows
-latest_python_url=$(curl -sSL "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=10" | \
-    jq -r '[.[] | select(.prerelease == false)][0].assets[] | select(.name | test("cpython-3\\.12\\.[0-9]+\\+[0-9]+-x86_64-pc-windows-msvc-install_only\\.tar\\.gz$")) | .browser_download_url' | \
-    head -1)
-
-if [ -z "$latest_python_url" ]; then
-    echo "ERROR: Could not find latest Python 3.12.xx release URL"
-    exit 1
-fi
-
-echo "Found Python 3.12.xx at: $latest_python_url"
-echo "=== Downloading Python 3.12 standalone build ==="
-curl -sSL "$latest_python_url" -o python.tar.gz
+# Pinned to specific release to prevent supply-chain attacks via compromised upstream
+echo "=== Downloading Python 3.12.12+20251217 standalone build ==="
+curl -sSL \
+    https://github.com/astral-sh/python-build-standalone/releases/download/20251217/cpython-3.12.12%2B20251217-x86_64-pc-windows-msvc-install_only.tar.gz \
+    -o python.tar.gz
 tar -zxf python.tar.gz
 mv python python_standalone
 
