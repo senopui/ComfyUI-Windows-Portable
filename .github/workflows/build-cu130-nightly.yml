@@ -32,7 +32,7 @@ jobs:
           shell: bash  # bash is available on Windows runners and provides timeout command
           working-directory: builder-cu130/ComfyUI_Windows_portable
           run: |
-            echo "Testing maximum fidelity mode (disable xformers, smart memory, and FlashAttention)..."
+            echo "Testing maximum fidelity mode (disable xformers and smart memory)..."
             # timeout command (from bash) limits test duration to 120 seconds
             timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --quick-test-for-ci 2>&1 | tee maximum_fidelity_test.log || true
             # Check if log file was created

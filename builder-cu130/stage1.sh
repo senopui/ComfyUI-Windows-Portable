@@ -57,7 +57,7 @@ echo "=== Attempting flash-attn from AI-windows-whl ==="
 $pip_exe install flash-attn --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn binary wheel not available for cp313/torch-nightly, source build prevented (skipping)"
 
 # Guarded install: xformers via AI-windows-whl
-# Install xformers normally first to get all dependencies, then check if torch was downgraded
+# Attempt binary-only xformers install (with its bundled dependencies), then check if torch was downgraded
 # Use --only-binary to avoid building from source (avoids mismatched torch/python versions)
 echo "=== Attempting xformers from AI-windows-whl ==="
 $pip_exe install xformers --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers binary wheel not available for cp313/torch-nightly, source build prevented (skipping)"
