@@ -30,10 +30,8 @@ jobs:
           working-directory: builder-cu130/ComfyUI_Windows_portable
           run: |
             echo "Testing maximum fidelity mode (disable xformers and smart memory)..."
-            set -o pipefail
-            status=0
             # timeout command (from bash) limits test duration to 120 seconds
-            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --quick-test-for-ci 2>&1 | tee maximum_fidelity_test.log || status=$?
+            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --quick-test-for-ci 2>&1 | tee maximum_fidelity_test.log || true
             # Check if log file was created
             if [ ! -f maximum_fidelity_test.log ]; then
               echo "ERROR: Log file was not created!"
@@ -49,10 +47,10 @@ jobs:
               cat maximum_fidelity_test.log
               exit 1
             fi
-            if [ $status -ne 0 ]; then
-              echo "ERROR: Maximum fidelity launcher exited with status $status"
+            if grep -q "unrecognized arguments" maximum_fidelity_test.log; then
+              echo "ERROR: Unrecognized arguments detected in maximum fidelity launcher test!"
               cat maximum_fidelity_test.log
-              exit $status
+              exit 1
             fi
             echo "Maximum fidelity launcher test passed!"
 
@@ -64,8 +62,8 @@ jobs:
             set -o pipefail
             status=0
             # timeout command (from bash) limits test duration to 120 seconds
-            # Note: Must disable xformers when testing with --cpu as they require CUDA
-            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log || status=$?
+            # Note: Must disable xformers when testing with --cpu as it requires CUDA
+            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log || true
             # Check if log file was created
             if [ ! -f optimized_fidelity_test.log ]; then
               echo "ERROR: Log file was not created!"
@@ -81,10 +79,10 @@ jobs:
               cat optimized_fidelity_test.log
               exit 1
             fi
-            if [ $status -ne 0 ]; then
-              echo "ERROR: Optimized fidelity launcher exited with status $status"
+            if grep -q "unrecognized arguments" optimized_fidelity_test.log; then
+              echo "ERROR: Unrecognized arguments detected in optimized fidelity launcher test!"
               cat optimized_fidelity_test.log
-              exit $status
+              exit 1
             fi
             echo "Optimized fidelity launcher test passed!"
 

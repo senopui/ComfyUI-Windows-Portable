@@ -55,11 +55,27 @@ echo "=== Verifying PyTorch installation ==="
 
 # Guarded install: flash-attn via AI-windows-whl
 # flash-attn requires torch to be installed first (imports torch during build)
-echo "=== Attempting flash-attn from AI-windows-whl (pinned) ==="
-$pip_exe install --only-binary=:all: "flash-attn==2.6.1" --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn install failed (wheel likely unavailable for cp313/torch-nightly)"
+# Use --only-binary to prevent PEP517 source builds which fail without torch in isolation
+echo "=== Attempting flash-attn from AI-windows-whl ==="
+$pip_exe install flash-attn --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn binary wheel not available for cp313/torch-nightly, source build prevented (skipping)"
 
-# Guarded install: xformers is skipped for cp313 torch-nightly cu130 (no compatible wheels yet)
-echo "=== Skipping xformers install (no compatible cp313 torch-nightly cu130 wheel available) ==="
+# Guarded install: xformers via AI-windows-whl
+# Attempt binary-only xformers install (with its bundled dependencies), then check if torch was downgraded
+# Use --only-binary to avoid building from source (avoids mismatched torch/python versions)
+echo "=== Attempting xformers from AI-windows-whl ==="
+$pip_exe install xformers --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers binary wheel not available for cp313/torch-nightly, source build prevented (skipping)"
+
+# Verify torch nightly is still installed after xformers (not downgraded)
+echo "=== Verifying PyTorch version after xformers install ==="
+"$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'torch was downgraded to {torch.__version__}'; print(f'PyTorch {torch.__version__} verified')" || {
+    echo "WARNING: PyTorch version check failed, reinstalling PyTorch nightly"
+    $pip_exe install --force-reinstall --no-deps -r "$workdir"/pak3.txt
+    # Verify recovery reinstall succeeded
+    "$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'torch recovery reinstall failed, got {torch.__version__}'; print(f'PyTorch {torch.__version__} recovery verified')" || {
+        echo "ERROR: PyTorch recovery reinstall failed, aborting build"
+        exit 1
+    }
+}
 
 # Guarded install: sageattention via AI-windows-whl
 echo "=== Attempting sageattention from AI-windows-whl ==="
