@@ -55,7 +55,7 @@ echo "=== Verifying PyTorch installation ==="
 # flash-attn requires torch to be installed first (imports torch during build)
 # Force binary-only install to prevent source builds which fail in CI without torch headers
 echo "=== Attempting flash-attn from AI-windows-whl (binary-only) ==="
-$pip_exe install flash-attn --only-binary flash-attn --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn binary wheel not available for this Python+PyTorch+CUDA combination"
+$pip_exe install flash-attn --only-binary=flash-attn --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn binary wheel not available for this Python+PyTorch+CUDA combination"
 
 # Guarded install: xformers via AI-windows-whl
 # Install xformers normally first to get all dependencies, then check if torch was downgraded
