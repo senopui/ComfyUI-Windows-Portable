@@ -1,13 +1,8 @@
-@echo off
+@echo on
 setlocal
 
-@REM Maximum Fidelity Mode - Favors quality and stability over speed
-@REM - Disables xformers (uses PyTorch's native attention for maximum compatibility)
-@REM - Disables smart memory management (more conservative memory handling)
-@REM - Default port 8188 (compatible with character_select_stand_alone_app_test)
-
 @REM If you don't want the browser to open automatically, add [ --disable-auto-launch ] after the last argument.
-set "EXTRA_ARGS=--disable-auto-launch --disable-xformers --disable-smart-memory"
+set "EXTRA_ARGS=--disable-auto-launch"
 
 @REM To set proxy, edit and uncomment the two lines below (remove 'rem ' in the beginning of line).
 rem set HTTP_PROXY=http://localhost:1080
@@ -25,16 +20,16 @@ rem set HF_TOKEN=
 @REM The following content generally does not require user modification.
 
 @REM This command redirects HuggingFace-Hub to download model files in this folder.
-set HF_HUB_CACHE=%~dp0HuggingFaceHub
+set HF_HUB_CACHE=%~dp0\HuggingFaceHub
 
 @REM This command redirects Pytorch Hub to download model files in this folder.
-set TORCH_HOME=%~dp0TorchHome
+set TORCH_HOME=%~dp0\TorchHome
 
 @REM This command will set PATH environment variable.
-set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
+set PATH=%PATH%;%~dp0\MinGit\cmd;%~dp0\python_standalone\Scripts
 
 @REM This command will let the .pyc files to be stored in one place.
-set PYTHONPYCACHEPREFIX=%~dp0pycache
+set PYTHONPYCACHEPREFIX=%~dp0\pycache
 
 .\python_standalone\python.exe -s -B ComfyUI\main.py --windows-standalone-build %EXTRA_ARGS%
 
