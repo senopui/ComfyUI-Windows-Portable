@@ -106,15 +106,16 @@ jobs:
               echo "✅ Build completed successfully" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "### Package Contents" >> $GITHUB_STEP_SUMMARY
-              echo "- Python: $(ComfyUI_Windows_portable/python_standalone/python.exe --version 2>&1 || echo 'N/A')" >> $GITHUB_STEP_SUMMARY
-              echo "- ComfyUI: $(cd ComfyUI_Windows_portable/ComfyUI && git describe --tags --always 2>/dev/null || echo 'master')" >> $GITHUB_STEP_SUMMARY
+              py_ver=$(ComfyUI_Windows_portable/python_standalone/python.exe --version 2>&1 || echo 'N/A')
+              echo "- Python: $py_ver" >> $GITHUB_STEP_SUMMARY
+              comfy_ver=$(cd ComfyUI_Windows_portable/ComfyUI 2>/dev/null && git describe --tags --always 2>/dev/null || echo 'master')
+              echo "- ComfyUI: $comfy_ver" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "### Archive Files" >> $GITHUB_STEP_SUMMARY
-              if ls *.7z* >/dev/null 2>&1; then
-                ls -lh *.7z* | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
-              fi
-              if ls *.zip* >/dev/null 2>&1; then
-                ls -lh *.zip* | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
+              if ls *.7z* >/dev/null 2>&1 || ls *.zip* >/dev/null 2>&1; then
+                ls -lh *.7z* *.zip* 2>/dev/null | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY || echo "- Archive files created" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "- No archive files found" >> $GITHUB_STEP_SUMMARY
               fi
             else
               echo "❌ Build failed - portable directory not found" >> $GITHUB_STEP_SUMMARY
