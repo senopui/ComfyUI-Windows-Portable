@@ -16,7 +16,7 @@ facexlib
 fvcore
 hydra-core
 iopath
-# audioop-lts restores audioop module removed in Python 3.13 (required by pydub)
+# audioop-lts restores audioop module (deprecated in Python 3.11, removed in Python 3.13; required by pydub)
 audioop-lts; python_version >= "3.13"
 pydub
 decord
