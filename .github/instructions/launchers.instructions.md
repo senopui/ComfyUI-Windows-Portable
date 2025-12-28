@@ -27,7 +27,6 @@ applyTo: "**/*.bat"
 - Keep user-editable flags grouped in `EXTRA_ARGS` (pattern used in `builder-cu130/attachments/ExtraScripts/*.bat`).
 
 ## Known launcher variants
-- In `builder-cu130/attachments/ExtraScripts/` the repo contains:
-  - `run_maximum_fidelity.bat` (EXTRA_ARGS disables xformers/smart-memory/flash-attn)
-  - `run_optimized_fidelity.bat` (EXTRA_ARGS defaults to `--disable-auto-launch`)
-Document these patterns; don't "normalize" them away.
+- Main supported launchers:
+  - `run_nvidia_gpu.bat`
+  - `run_cpu.bat`

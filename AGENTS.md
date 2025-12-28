@@ -68,8 +68,6 @@ The primary goal is to maintain a nightly/bleeding-edge Windows portable package
 ### Launcher Management
 - **Preserve launchers**: Don't modify working launchers
 - **PATH configuration**: Prepend portable Git to PATH
-- **run_maximum_fidelity.bat**: Use `--disable-xformers --disable-smart-memory`
-- **run_optimized_fidelity.bat**: Use defaults (xformers/FlashAttention enabled)
 
 ### Code Practices
 - **Bash scripts**: Always use `set -euo pipefail` or `set -eux`
@@ -168,10 +166,10 @@ gcs='git clone --depth=1 --no-tags --recurse-submodules --shallow-submodules'
 - [ ] All expected files present in package
 
 ### Launcher Testing
-- [ ] run_maximum_fidelity.bat exists in ExtraScripts/
-- [ ] run_optimized_fidelity.bat exists in ExtraScripts/
-- [ ] Both launchers use correct PATH configuration (%~dp0MinGit\cmd)
-- [ ] Both launchers use relative paths (.\python_standalone\python.exe)
+- [ ] run_nvidia_gpu.bat exists in ExtraScripts/ and root
+- [ ] run_cpu.bat exists in ExtraScripts/ and root
+- [ ] Launchers use correct PATH configuration (%~dp0MinGit\cmd)
+- [ ] Launchers use relative paths (.\python_standalone\python.exe)
 - [ ] Launchers copied to installation root work correctly
 - [ ] CPU launcher validation passes
 - [ ] No Traceback on test run
