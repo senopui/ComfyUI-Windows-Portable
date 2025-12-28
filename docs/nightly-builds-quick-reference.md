@@ -4,7 +4,7 @@
 
 ### What You Get
 - **Python 3.13** + **PyTorch Nightly (2.10+)** + **CUDA 13.0**
-- Latest xformers, FlashAttention, SageAttention, NATTEN
+- Performance wheels best-effort (FlashAttention, SageAttention, NATTEN; xformers skipped until compatible cp313/cu130 wheels exist)
 - ComfyUI master branch (bleeding edge)
 - Two specialized launcher modes
 
@@ -19,7 +19,7 @@ Look for files named: `ComfyUI_Windows_portable_cu130_nightly.7z.*`
 **File:** `ExtraScripts/run_maximum_fidelity.bat`
 
 ```
-Flags: --disable-xformers --disable-smart-memory --disable-flash-attention
+Flags: --disable-xformers --disable-smart-memory
 Use for: Production renders, quality-critical work
 Trade-off: Slower, but maximum precision
 ```

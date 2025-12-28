@@ -24,6 +24,9 @@ mv python python_standalone
 echo "=== Installing pip, wheel, setuptools ==="
 $pip_exe install --upgrade pip wheel setuptools
 
+echo "=== Installing audioop-lts for Python 3.13 compatibility (pinned) ==="
+$pip_exe install --only-binary=:all: "audioop-lts==0.2.1" || echo "WARNING: audioop-lts install failed (required for pydub on Python 3.13)"
+
 echo "=== Installing pak2.txt (build tools) ==="
 $pip_exe install -r "$workdir"/pak2.txt
 
@@ -40,14 +43,15 @@ echo "=== Verifying PyTorch installation ==="
 
 # Guarded install: flash-attn via AI-windows-whl (binary-only, no source builds)
 # flash-attn requires torch to be installed first (imports torch during build)
-# Force binary-only install to prevent source builds which fail in CI without torch headers
-echo "=== Attempting flash-attn from AI-windows-whl (binary-only) ==="
-$pip_exe install flash-attn --only-binary=flash-attn --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn binary wheel not available for this Python+PyTorch+CUDA combination"
+# Use --only-binary to prevent PEP517 source builds which fail without torch in isolation
+echo "=== Attempting flash-attn from AI-windows-whl ==="
+$pip_exe install flash-attn --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn binary wheel not available for cp313/torch-nightly, source build prevented (skipping)"
 
 # Guarded install: xformers via AI-windows-whl
-# Install xformers normally first to get all dependencies, then check if torch was downgraded
+# Attempt binary-only xformers install (with its bundled dependencies), then check if torch was downgraded
+# Use --only-binary to avoid building from source (avoids mismatched torch/python versions)
 echo "=== Attempting xformers from AI-windows-whl ==="
-$pip_exe install xformers --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers binary wheel not available for this Python+PyTorch+CUDA combination"
+$pip_exe install xformers --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers binary wheel not available for cp313/torch-nightly, source build prevented (skipping)"
 
 # Verify torch nightly is still installed after xformers (not downgraded)
 echo "=== Verifying PyTorch version after xformers install ==="
