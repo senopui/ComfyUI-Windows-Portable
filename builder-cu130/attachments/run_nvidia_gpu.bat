@@ -1,11 +1,5 @@
-@echo off
+@echo on
 setlocal
-
-@REM Optimized High Fidelity Mode - Balances quality with performance
-@REM - Enables xformers for optimized attention (when available)
-@REM - Enables smart memory management
-@REM - Enables FlashAttention when available (faster and still high quality)
-@REM - Default port 8188 (compatible with character_select_stand_alone_app_test)
 
 @REM If you don't want the browser to open automatically, add [ --disable-auto-launch ] after the last argument.
 set "EXTRA_ARGS=--disable-auto-launch"
@@ -26,16 +20,16 @@ rem set HF_TOKEN=
 @REM The following content generally does not require user modification.
 
 @REM This command redirects HuggingFace-Hub to download model files in this folder.
-set HF_HUB_CACHE=%~dp0HuggingFaceHub
+set HF_HUB_CACHE=%~dp0\HuggingFaceHub
 
 @REM This command redirects Pytorch Hub to download model files in this folder.
-set TORCH_HOME=%~dp0TorchHome
+set TORCH_HOME=%~dp0\TorchHome
 
 @REM This command will set PATH environment variable.
-set PATH=%PATH%;%~dp0MinGit\cmd;%~dp0python_standalone\Scripts
+set PATH=%PATH%;%~dp0\MinGit\cmd;%~dp0\python_standalone\Scripts
 
 @REM This command will let the .pyc files to be stored in one place.
-set PYTHONPYCACHEPREFIX=%~dp0pycache
+set PYTHONPYCACHEPREFIX=%~dp0\pycache
 
 .\python_standalone\python.exe -s -B ComfyUI\main.py --windows-standalone-build %EXTRA_ARGS%
 

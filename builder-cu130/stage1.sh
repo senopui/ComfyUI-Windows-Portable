@@ -10,25 +10,13 @@ export PIP_NO_WARN_SCRIPT_LOCATION=0
 
 ls -lahF
 
-# Download Python 3.13 Standalone - fetch latest 3.13.xx release
-echo "=== Fetching latest Python 3.13.xx standalone build ==="
-# Get the latest release (not pre-release) and find the Python 3.13.xx download URL
-# 1. Fetch last 10 releases from python-build-standalone
-# 2. Filter out pre-releases (select .prerelease == false)
-# 3. Take the first (most recent) release
-# 4. From that release's assets, find the cpython-3.13.xx install_only tarball for Windows
-latest_python_url=$(curl -sSL "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=10" | \
-    jq -r '[.[] | select(.prerelease == false)][0].assets[] | select(.name | test("cpython-3\\.13\\.[0-9]+\\+[0-9]+-x86_64-pc-windows-msvc-install_only\\.tar\\.gz$")) | .browser_download_url' | \
-    head -1)
-
-if [ -z "$latest_python_url" ]; then
-    echo "ERROR: Could not find latest Python 3.13.xx release URL"
-    exit 1
-fi
-
-echo "Found Python 3.13.xx at: $latest_python_url"
-echo "=== Downloading Python 3.13 standalone build ==="
-curl -sSL "$latest_python_url" -o python.tar.gz
+# Download Python 3.12 Standalone (pinned for audioop compatibility and supply-chain security)
+# Python 3.13 removed the audioop module which breaks pydub and some custom nodes
+# Pinned to specific release to prevent supply-chain attacks via compromised upstream
+echo "=== Downloading Python 3.12.12+20251217 standalone build ==="
+curl -sSL \
+    https://github.com/astral-sh/python-build-standalone/releases/download/20251217/cpython-3.12.12%2B20251217-x86_64-pc-windows-msvc-install_only.tar.gz \
+    -o python.tar.gz
 tar -zxf python.tar.gz
 mv python python_standalone
 
@@ -53,7 +41,7 @@ echo "=== Verifying PyTorch installation ==="
     exit 1
 }
 
-# Guarded install: flash-attn via AI-windows-whl
+# Guarded install: flash-attn via AI-windows-whl (binary-only, no source builds)
 # flash-attn requires torch to be installed first (imports torch during build)
 # Use --only-binary to prevent PEP517 source builds which fail without torch in isolation
 echo "=== Attempting flash-attn from AI-windows-whl ==="
@@ -79,27 +67,27 @@ echo "=== Verifying PyTorch version after xformers install ==="
 
 # Guarded install: sageattention via AI-windows-whl
 echo "=== Attempting sageattention from AI-windows-whl ==="
-$pip_exe install sageattention --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: sageattention install failed (may not be available for cp313/torch-nightly)"
+$pip_exe install sageattention --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: sageattention binary wheel not available for this Python+PyTorch+CUDA combination"
 
 # Guarded install: triton-windows via AI-windows-whl
 echo "=== Attempting triton-windows from AI-windows-whl ==="
-$pip_exe install 'triton-windows<3.6' --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: triton-windows install failed (may not be available for cp313/torch-nightly)"
+$pip_exe install 'triton-windows<3.6' --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: triton-windows binary wheel not available for this Python+PyTorch+CUDA combination"
 
 # Guarded install: natten via whl.natten.org
 echo "=== Attempting natten from whl.natten.org ==="
-$pip_exe install natten -f https://whl.natten.org || echo "WARNING: natten install failed (may not be available for cp313/torch-nightly)"
+$pip_exe install natten -f https://whl.natten.org || echo "WARNING: natten binary wheel not available for this Python+PyTorch+CUDA combination"
 
 # Guarded install: nunchaku via AI-windows-whl
 echo "=== Attempting nunchaku from AI-windows-whl ==="
-$pip_exe install nunchaku --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: nunchaku install failed (may not be available for cp313/torch-nightly)"
+$pip_exe install nunchaku --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: nunchaku binary wheel not available for this Python+PyTorch+CUDA combination"
 
 # Guarded install: spargeattention via AI-windows-whl
 echo "=== Attempting spargeattention from AI-windows-whl ==="
-$pip_exe install spargeattention --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: spargeattention install failed (may not be available for cp313/torch-nightly)"
+$pip_exe install spargeattention --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: spargeattention binary wheel not available for this Python+PyTorch+CUDA combination"
 
 # Guarded install: bitsandbytes
 echo "=== Attempting bitsandbytes ==="
-$pip_exe install bitsandbytes || echo "WARNING: bitsandbytes install failed (may not be available for cp313/torch-nightly)"
+$pip_exe install bitsandbytes || echo "WARNING: bitsandbytes binary wheel not available for this Python+PyTorch+CUDA combination"
 
 # temp-fix, TODO: remove after version chaos resolved
 echo "=== Installing transformers ==="
@@ -114,13 +102,13 @@ $pip_exe install -r "$workdir"/pak5.txt
 echo "=== Installing pak6.txt ==="
 $pip_exe install -r "$workdir"/pak6.txt
 
-# Guarded install: dlib (cp312 wheel may not work with Python 3.13)
-echo "=== Attempting dlib (best-effort for cp313) ==="
-$pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp312-cp312-win_amd64.whl || echo "WARNING: dlib install failed (likely cp312 wheel incompatible with cp313)"
+# Guarded install: dlib (cp312 wheel is compatible with Python 3.12)
+echo "=== Attempting dlib ==="
+$pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp312-cp312-win_amd64.whl || echo "WARNING: dlib install failed"
 
-# Guarded install: insightface (cp312 wheel may not work with Python 3.13)
-echo "=== Attempting insightface (best-effort for cp313) ==="
-$pip_exe install https://github.com/Gourieff/Assets/raw/refs/heads/main/Insightface/insightface-0.7.3-cp312-cp312-win_amd64.whl || echo "WARNING: insightface install failed (likely cp312 wheel incompatible with cp313)"
+# Guarded install: insightface (cp312 wheel is compatible with Python 3.12)
+echo "=== Attempting insightface ==="
+$pip_exe install https://github.com/Gourieff/Assets/raw/refs/heads/main/Insightface/insightface-0.7.3-cp312-cp312-win_amd64.whl || echo "WARNING: insightface install failed"
 
 # Guarded install: cupy for CUDA 13.0 (try cuda13x first, fallback to cuda12x)
 echo "=== Attempting cupy-cuda13x (fallback to cuda12x if unavailable) ==="
@@ -141,7 +129,7 @@ while IFS= read -r line || [ -n "$line" ]; do
         continue
     fi
     echo ">>> Installing: $line"
-    $pip_exe install "$line" || echo "WARNING: Failed to install $line (may not be available for cp313/torch-nightly)"
+    $pip_exe install "$line" || echo "WARNING: Failed to install $line (binary wheel not available for this Python+PyTorch+CUDA combination)"
 done < "$workdir"/pak8.txt
 
 # Install comfyui-frontend-package from ComfyUI master

@@ -86,6 +86,42 @@ jobs:
             fi
             echo "Optimized fidelity launcher test passed!"
 
+        - name: Pre-packaging sanity check
+          shell: bash
+          working-directory: builder-cu130
+          run: |
+            echo "=== Verifying packaged artifact structure before compression ==="
+            root="ComfyUI_Windows_portable"
+            if [ ! -d "$root" ]; then
+              echo "ERROR: Portable root directory not found at $root"
+              exit 1
+            fi
+            echo ""
+            echo "=== Top-level files in $root ==="
+            ls -lah "$root"/*.bat "$root"/*.py 2>/dev/null || echo "(No .bat or .py files found in root)"
+            echo ""
+            echo "=== Checking required launcher files ==="
+            required_launchers=(
+              "$root/run_nvidia_gpu.bat"
+              "$root/run_cpu.bat"
+            )
+            missing_launchers=0
+            for launcher in "${required_launchers[@]}"; do
+              if [ -f "$launcher" ]; then
+                echo "✓ Found: $launcher"
+              else
+                echo "✗ MISSING: $launcher"
+                missing_launchers=$((missing_launchers + 1))
+              fi
+            done
+            if [ $missing_launchers -gt 0 ]; then
+              echo ""
+              echo "ERROR: $missing_launchers required launcher(s) missing!"
+              exit 1
+            fi
+            echo ""
+            echo "=== Pre-packaging sanity check PASSED ==="
+
         - name: Stage 3 Compressing Package
           shell: bash
           working-directory: builder-cu130
