@@ -28,16 +28,16 @@ jobs:
               url=""
             else
               url=$(curl -fsSL "$api" | python - <<'PY'
-import json, sys, re
-pattern = re.compile(r"^cpython-3\.13\.\d+\+\d+-x86_64-pc-windows-msvc-install_only\.tar\.gz$")
-for release in json.load(sys.stdin):
-    for asset in release.get("assets", []):
-        name = asset.get("name") or ""
-        if pattern.fullmatch(name):
-            print(asset.get("browser_download_url", ""))
-            sys.exit(0)
-sys.exit(1)
-PY
+            import json, sys, re
+            pattern = re.compile(r"^cpython-3\.13\.\d+\+\d+-x86_64-pc-windows-msvc-install_only\.tar\.gz$")
+            for release in json.load(sys.stdin):
+                for asset in release.get("assets", []):
+                    name = asset.get("name") or ""
+                    if pattern.fullmatch(name):
+                        print(asset.get("browser_download_url", ""))
+                        sys.exit(0)
+            sys.exit(1)
+            PY
               ) || url=""
             fi
             if [ -z "$url" ]; then
@@ -80,9 +80,9 @@ PY
             missing_launchers=0
             for launcher in "${required_launchers[@]}"; do
               if [ -f "$launcher" ]; then
-                echo "✓ Found: $launcher"
+                echo "[OK] Found: $launcher"
               else
-                echo "✗ MISSING: $launcher"
+                echo "[MISSING] $launcher"
                 missing_launchers=$((missing_launchers + 1))
               fi
             done
