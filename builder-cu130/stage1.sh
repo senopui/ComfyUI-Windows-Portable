@@ -148,23 +148,25 @@ $pip_exe install -r "$workdir"/pak5.txt
 echo "=== Installing pak6.txt ==="
 $pip_exe install -r "$workdir"/pak6.txt
 
+# Detect Python version once for binary wheel compatibility (used by dlib and insightface)
+py_version=$("$workdir"/python_standalone/python.exe -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+echo "Detected Python version: $py_version"
+
 # Guarded install: dlib (cp313 on Python 3.13, cp312 otherwise)
 echo "=== Attempting dlib ==="
-py_version=$("$workdir"/python_standalone/python.exe -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
 if [[ "$py_version" == "3.13" ]]; then
     echo "Python 3.13 detected, attempting dlib cp313 wheel"
-    if ! $pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp313-cp313-win_amd64.whl; then
+    if ! $pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp313-cp313-win_amd64.whl#sha256=9fe3b7bceb6ba0a8b92362d36535ccbccd8e65d2832804a8aa04124ec0f3a595; then
         echo "WARNING: dlib cp313 install failed, attempting cp312 fallback"
-        $pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp312-cp312-win_amd64.whl || echo "WARNING: dlib install failed or is incompatible with Python 3.13"
+        $pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp312-cp312-win_amd64.whl#sha256=417e2d7a53e65d4dbd961e616f990bab2d2faaca272b4d9f5be9ce7f2623ff60 || echo "WARNING: dlib install failed or is incompatible with Python 3.13"
     fi
 else
     echo "Python $py_version detected, installing dlib cp312 wheel"
-    $pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp312-cp312-win_amd64.whl || echo "WARNING: dlib install failed"
+    $pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp312-cp312-win_amd64.whl#sha256=417e2d7a53e65d4dbd961e616f990bab2d2faaca272b4d9f5be9ce7f2623ff60 || echo "WARNING: dlib install failed"
 fi
 
 # Guarded install: insightface (prefer cp313 on Python 3.13, fallback to cp312)
 echo "=== Attempting insightface ==="
-py_version=$("$workdir"/python_standalone/python.exe -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
 if [[ "$py_version" == "3.13" ]]; then
     echo "Python 3.13 detected, attempting insightface cp313 wheel"
     if ! $pip_exe install https://raw.githubusercontent.com/Gourieff/Assets/606558ed08f16b99a29ef30b0df0b4622164c524/Insightface/insightface-0.7.3-cp313-cp313-win_amd64.whl#sha256=7aa0ce24bc76a31d48b22f5ced38f344a857bc7d6a56071e4f23ab033a638f1c; then
