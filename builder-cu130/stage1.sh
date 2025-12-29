@@ -12,10 +12,25 @@ ls -lahF
 
 # Download Python 3.13 Standalone (workflow-resolved, fallback to pinned)
 python_url_default="https://github.com/astral-sh/python-build-standalone/releases/download/20251205/cpython-3.13.11%2B20251205-x86_64-pc-windows-msvc-install_only.tar.gz"
+python_sha_default="1a57991904d4182932c791ef1e60b78399892802654767b6b68d3c778ca758d9"
 python_url="${PYTHON_STANDALONE_URL:-$python_url_default}"
 echo "=== Downloading Python 3.13 standalone build ==="
 echo "Source: $python_url"
 curl -sSL "$python_url" -o python.tar.gz
+expected_sha="${PYTHON_STANDALONE_SHA256:-}"
+if [[ -z "$expected_sha" && "$python_url" == "$python_url_default" ]]; then
+    expected_sha="$python_sha_default"
+fi
+if [[ -n "$expected_sha" ]]; then
+    echo "Verifying Python archive SHA256..."
+    actual_sha=$(sha256sum python.tar.gz | awk '{print $1}')
+    if [[ "$actual_sha" != "$expected_sha" ]]; then
+        echo "ERROR: Python archive SHA256 mismatch. Expected $expected_sha got $actual_sha"
+        exit 1
+    fi
+else
+    echo "WARNING: No Python archive hash provided; skipping SHA256 verification."
+fi
 tar -zxf python.tar.gz
 mv python python_standalone
 
