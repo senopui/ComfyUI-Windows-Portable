@@ -10,13 +10,27 @@ export PIP_NO_WARN_SCRIPT_LOCATION=0
 
 ls -lahF
 
-# Download Python 3.12 Standalone (pinned for audioop compatibility and supply-chain security)
-# Python 3.13 removed the audioop module which breaks pydub and some custom nodes
-# Pinned to specific release to prevent supply-chain attacks via compromised upstream
-echo "=== Downloading Python 3.12.12+20251217 standalone build ==="
-curl -sSL \
-    https://github.com/astral-sh/python-build-standalone/releases/download/20251217/cpython-3.12.12%2B20251217-x86_64-pc-windows-msvc-install_only.tar.gz \
-    -o python.tar.gz
+# Download Python 3.13 Standalone (workflow-resolved, fallback to pinned)
+python_url_default="https://github.com/astral-sh/python-build-standalone/releases/download/20251205/cpython-3.13.11%2B20251205-x86_64-pc-windows-msvc-install_only.tar.gz"
+python_sha_default="1a57991904d4182932c791ef1e60b78399892802654767b6b68d3c778ca758d9"
+python_url="${PYTHON_STANDALONE_URL:-$python_url_default}"
+echo "=== Downloading Python 3.13 standalone build ==="
+echo "Source: $python_url"
+curl -sSL "$python_url" -o python.tar.gz
+expected_sha="${PYTHON_STANDALONE_SHA256:-}"
+if [[ -z "$expected_sha" && "$python_url" == "$python_url_default" ]]; then
+    expected_sha="$python_sha_default"
+fi
+if [[ -n "$expected_sha" ]]; then
+    echo "Verifying Python archive SHA256..."
+    actual_sha=$(sha256sum python.tar.gz | awk '{print $1}')
+    if [[ "$actual_sha" != "$expected_sha" ]]; then
+        echo "ERROR: Python archive SHA256 mismatch. Expected $expected_sha got $actual_sha"
+        exit 1
+    fi
+else
+    echo "WARNING: No Python archive hash provided; skipping SHA256 verification."
+fi
 tar -zxf python.tar.gz
 mv python python_standalone
 
@@ -30,8 +44,8 @@ $pip_exe install --only-binary=:all: "audioop-lts==0.2.1" || echo "WARNING: audi
 echo "=== Installing pak2.txt (build tools) ==="
 $pip_exe install -r "$workdir"/pak2.txt
 
-# Install PyTorch nightly cu130 FIRST
-echo "=== Installing PyTorch nightly cu130 (torch, torchvision, torchaudio) ==="
+# Install PyTorch nightly cu130 FIRST (torch 2.10+ series)
+echo "=== Installing PyTorch nightly cu130 (torch>=2.10, torchvision, torchaudio) ==="
 $pip_exe install -r "$workdir"/pak3.txt
 
 # Verify torch is installed and importable before installing performance wheels
@@ -55,15 +69,46 @@ $pip_exe install xformers --only-binary :all: --extra-index-url https://ai-windo
 
 # Verify torch nightly is still installed after xformers (not downgraded)
 echo "=== Verifying PyTorch version after xformers install ==="
-"$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'torch was downgraded to {torch.__version__}'; print(f'PyTorch {torch.__version__} verified')" || {
+if ! "$workdir"/python_standalone/python.exe - <<'PYVER'
+from packaging.version import Version, InvalidVersion
+import torch
+
+ver = getattr(torch, "__version__", None)
+if not ver or not isinstance(ver, str):
+    raise SystemExit("torch version is missing or invalid after xformers install")
+base = ver.split('+', 1)[0]
+try:
+    parsed = Version(base)
+except InvalidVersion as exc:
+    raise SystemExit(f"invalid torch version string '{ver}': {exc}")
+if parsed < Version("2.10.0"):
+    raise SystemExit(f"torch was downgraded to {ver}, expected >=2.10.0")
+if "cu130" not in ver:
+    raise SystemExit(f"torch build is not cu130: {ver}")
+print(f"PyTorch {ver} verified")
+PYVER
+then
     echo "WARNING: PyTorch version check failed, reinstalling PyTorch nightly"
     $pip_exe install --force-reinstall --no-deps -r "$workdir"/pak3.txt
-    # Verify recovery reinstall succeeded
-    "$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'torch recovery reinstall failed, got {torch.__version__}'; print(f'PyTorch {torch.__version__} recovery verified')" || {
-        echo "ERROR: PyTorch recovery reinstall failed, aborting build"
-        exit 1
-    }
-}
+    "$workdir"/python_standalone/python.exe - <<'PYVER' || { echo "ERROR: PyTorch recovery reinstall verification failed"; exit 1; }
+from packaging.version import Version, InvalidVersion
+import torch
+
+ver = getattr(torch, "__version__", None)
+if not ver or not isinstance(ver, str):
+    raise SystemExit("torch version is missing or invalid after recovery reinstall")
+base = ver.split('+', 1)[0]
+try:
+    parsed = Version(base)
+except InvalidVersion as exc:
+    raise SystemExit(f"invalid torch version string '{ver}': {exc}")
+if parsed < Version("2.10.0"):
+    raise SystemExit(f"torch recovery reinstall failed, got {ver}")
+if "cu130" not in ver:
+    raise SystemExit(f"torch recovery reinstall not cu130: {ver}")
+print(f"PyTorch {ver} recovery verified")
+PYVER
+fi
 
 # Guarded install: sageattention via AI-windows-whl
 echo "=== Attempting sageattention from AI-windows-whl ==="
@@ -102,13 +147,16 @@ $pip_exe install -r "$workdir"/pak5.txt
 echo "=== Installing pak6.txt ==="
 $pip_exe install -r "$workdir"/pak6.txt
 
-# Guarded install: dlib (cp312 wheel is compatible with Python 3.12)
+# Guarded install: dlib (cp312 wheel may be skipped on Python 3.13)
 echo "=== Attempting dlib ==="
-$pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp312-cp312-win_amd64.whl || echo "WARNING: dlib install failed"
+$pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp312-cp312-win_amd64.whl || echo "WARNING: dlib install failed or is incompatible with Python 3.13"
 
-# Guarded install: insightface (cp312 wheel is compatible with Python 3.12)
+# Guarded install: insightface (prefer cp313, fallback to cp312 if needed)
 echo "=== Attempting insightface ==="
-$pip_exe install https://github.com/Gourieff/Assets/raw/refs/heads/main/Insightface/insightface-0.7.3-cp312-cp312-win_amd64.whl || echo "WARNING: insightface install failed"
+if ! $pip_exe install https://raw.githubusercontent.com/Gourieff/Assets/606558ed08f16b99a29ef30b0df0b4622164c524/Insightface/insightface-0.7.3-cp313-cp313-win_amd64.whl#sha256=7aa0ce24bc76a31d48b22f5ced38f344a857bc7d6a56071e4f23ab033a638f1c; then
+    echo "WARNING: insightface cp313 wheel unavailable or incompatible, attempting cp312 fallback"
+    $pip_exe install https://raw.githubusercontent.com/Gourieff/Assets/606558ed08f16b99a29ef30b0df0b4622164c524/Insightface/insightface-0.7.3-cp312-cp312-win_amd64.whl#sha256=4e58a504433ba5a500d48328689e7d6c69873165653ded7553ce804beb8723db || echo "WARNING: insightface install failed or is incompatible with Python 3.13"
+fi
 
 # Guarded install: cupy for CUDA 13.0 (try cuda13x first, fallback to cuda12x)
 echo "=== Attempting cupy-cuda13x (fallback to cuda12x if unavailable) ==="
@@ -155,12 +203,25 @@ echo "---"
 echo "Checking numpy and opencv versions:"
 "$workdir"/python_standalone/python.exe -c "import numpy, cv2; print(f'numpy: {numpy.__version__}'); print(f'opencv: {cv2.__version__}')" || echo "WARNING: Could not query numpy/opencv versions"
 echo "---"
-echo "Verifying final torch version is cu130 nightly:"
-"$workdir"/python_standalone/python.exe -c "import torch; assert 'cu130' in torch.__version__ and 'dev' in torch.__version__, f'ERROR: torch is {torch.__version__}, expected cu130 nightly'; print('[OK] PyTorch cu130 nightly verified')" || {
-    echo "ERROR: Final torch version verification failed!"
-    echo "This build requires PyTorch nightly cu130 but found a different version."
-    exit 1
-}
+echo "Verifying final torch version is cu130 and >=2.10:"
+"$workdir"/python_standalone/python.exe - <<'PYVER'
+from packaging.version import Version, InvalidVersion
+import torch
+
+ver = getattr(torch, "__version__", None)
+if not ver or not isinstance(ver, str):
+    raise SystemExit("ERROR: torch version is missing or invalid in final verification")
+base = ver.split('+', 1)[0]
+try:
+    parsed = Version(base)
+except InvalidVersion as exc:
+    raise SystemExit(f"ERROR: torch version string '{ver}' is invalid: {exc}")
+if parsed < Version("2.10.0"):
+    raise SystemExit(f"ERROR: torch is {ver}, expected >=2.10.0 with cu130 build")
+if "cu130" not in ver:
+    raise SystemExit(f"ERROR: torch build is not cu130: {ver}")
+print("[OK] PyTorch cu130 2.10+ verified")
+PYVER
 echo "=============================="
 
 $pip_exe list

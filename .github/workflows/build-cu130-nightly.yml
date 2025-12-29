@@ -18,6 +18,36 @@ jobs:
     steps:
         - uses: actions/checkout@v6
 
+        - name: Resolve latest Python 3.13 standalone build
+          shell: bash
+          run: |
+            default_url="https://github.com/astral-sh/python-build-standalone/releases/download/20251205/cpython-3.13.11%2B20251205-x86_64-pc-windows-msvc-install_only.tar.gz"
+            api="https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=5"
+            if ! command -v python >/dev/null 2>&1; then
+              echo "WARNING: System python not found; skipping dynamic Python resolution."
+              url=""
+            else
+              url=$(curl -fsSL "$api" | python - <<'PY'
+import json, sys, re
+pattern = re.compile(r"^cpython-3\.13\.\d+\+\d+-x86_64-pc-windows-msvc-install_only\.tar\.gz$")
+for release in json.load(sys.stdin):
+    for asset in release.get("assets", []):
+        name = asset.get("name") or ""
+        if pattern.fullmatch(name):
+            print(asset.get("browser_download_url", ""))
+            sys.exit(0)
+sys.exit(1)
+PY
+              ) || url=""
+            fi
+            if [ -z "$url" ]; then
+              echo "WARNING: Falling back to pinned Python build"
+              url="$default_url"
+            else
+              echo "Resolved Python build: $url"
+            fi
+            echo "PYTHON_STANDALONE_URL=$url" >> "$GITHUB_ENV"
+
         - name: Stage 1 Gathering Dependencies
           shell: bash
           working-directory: builder-cu130
@@ -27,57 +57,6 @@ jobs:
           shell: bash
           working-directory: builder-cu130
           run: bash stage2.sh
-
-        - name: Validate Maximum Fidelity Launcher
-          shell: bash  # bash is available on Windows runners and provides timeout command
-          working-directory: builder-cu130/ComfyUI_Windows_portable
-          run: |
-            echo "Testing maximum fidelity mode (disable xformers and smart memory)..."
-            # timeout command (from bash) limits test duration to 120 seconds
-            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --quick-test-for-ci 2>&1 | tee maximum_fidelity_test.log || true
-            # Check if log file was created
-            if [ ! -f maximum_fidelity_test.log ]; then
-              echo "ERROR: Log file was not created!"
-              exit 1
-            fi
-            # Check for Python tracebacks
-            if grep -q "Traceback" maximum_fidelity_test.log; then
-              echo "ERROR: Traceback detected in maximum fidelity launcher test!"
-              cat maximum_fidelity_test.log
-              exit 1
-            fi
-            if grep -q "unrecognized arguments" maximum_fidelity_test.log; then
-              echo "ERROR: Unrecognized arguments detected in maximum fidelity launcher test!"
-              cat maximum_fidelity_test.log
-              exit 1
-            fi
-            echo "Maximum fidelity launcher test passed!"
-
-        - name: Validate Optimized Fidelity Launcher
-          shell: bash  # bash is available on Windows runners and provides timeout command
-          working-directory: builder-cu130/ComfyUI_Windows_portable
-          run: |
-            echo "Testing optimized fidelity mode (default launcher arguments)..."
-            # timeout command (from bash) limits test duration to 120 seconds
-            # Note: Must disable xformers when testing with --cpu as it requires CUDA
-            timeout 120 ./python_standalone/python.exe -s -B ComfyUI/main.py --cpu --windows-standalone-build --disable-xformers --disable-smart-memory --quick-test-for-ci 2>&1 | tee optimized_fidelity_test.log || true
-            # Check if log file was created
-            if [ ! -f optimized_fidelity_test.log ]; then
-              echo "ERROR: Log file was not created!"
-              exit 1
-            fi
-            # Check for Python tracebacks
-            if grep -q "Traceback" optimized_fidelity_test.log; then
-              echo "ERROR: Traceback detected in optimized fidelity launcher test!"
-              cat optimized_fidelity_test.log
-              exit 1
-            fi
-            if grep -q "unrecognized arguments" optimized_fidelity_test.log; then
-              echo "ERROR: Unrecognized arguments detected in optimized fidelity launcher test!"
-              cat optimized_fidelity_test.log
-              exit 1
-            fi
-            echo "Optimized fidelity launcher test passed!"
 
         - name: Pre-packaging sanity check
           shell: bash

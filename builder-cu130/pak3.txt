@@ -1,4 +1,4 @@
 --index-url https://download.pytorch.org/whl/nightly/cu130
-torch
-torchvision
-torchaudio
+torch>=2.10.0
+torchvision>=0.20.0
+torchaudio>=2.10.0
