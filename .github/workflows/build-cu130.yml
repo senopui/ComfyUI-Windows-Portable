@@ -26,7 +26,7 @@ jobs:
             else
               url=$(curl -fsSL "$api" | python - <<'PY'
 import json, sys, re
-pattern = re.compile(r"cpython-3\.13\.\d+\+\d+-x86_64-pc-windows-msvc-install_only\.tar\.gz$")
+pattern = re.compile(r"^cpython-3\.13\.\d+\+\d+-x86_64-pc-windows-msvc-install_only\.tar\.gz$")
 for release in json.load(sys.stdin):
     for asset in release.get("assets", []):
         name = asset.get("name") or ""
