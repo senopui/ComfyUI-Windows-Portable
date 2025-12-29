@@ -6,32 +6,11 @@
 - **Python 3.13** + **PyTorch Nightly (2.10+)** + **CUDA 13.0**
 - Performance wheels best-effort (FlashAttention, SageAttention, NATTEN; xformers skipped until compatible cp313/cu130 wheels exist)
 - ComfyUI master branch (bleeding edge)
-- Two specialized launcher modes
 
 ### Download
 Look for files named: `ComfyUI_Windows_portable_cu130_nightly.7z.*`
 - Release tag: `nightly-cu130`
 - Updated daily at 02:00 UTC
-
-## Launcher Modes
-
-### Maximum Fidelity Mode
-**File:** `ExtraScripts/run_maximum_fidelity.bat`
-
-```
-Flags: --disable-xformers --disable-smart-memory
-Use for: Production renders, quality-critical work
-Trade-off: Slower, but maximum precision
-```
-
-### Optimized Fidelity Mode  
-**File:** `ExtraScripts/run_optimized_fidelity.bat`
-
-```
-Flags: (none - uses default optimizations)
-Use for: Interactive workflows, general use
-Trade-off: Faster, optimized performance
-```
 
 ## Key Differences from Stable Builds
 
@@ -78,7 +57,7 @@ Trade-off: Faster, optimized performance
 Automated via GitHub Actions:
 1. **Stage 1:** Install Python 3.13 + PyTorch nightly + bleeding-edge packages
 2. **Stage 2:** Clone ComfyUI master + custom nodes + run CPU test
-3. **Validation:** Test both launcher modes, check for errors
+3. **Validation:** Run quick test, check for errors
 4. **Stage 3:** Create split archives
 5. **Release:** Upload as draft/prerelease
 

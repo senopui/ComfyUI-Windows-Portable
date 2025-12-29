@@ -29,7 +29,8 @@ if [[ -n "$expected_sha" ]]; then
         exit 1
     fi
 else
-    echo "WARNING: No Python archive hash provided; skipping SHA256 verification."
+    echo "ERROR: No Python archive hash provided; SHA256 verification is required for security."
+    exit 1
 fi
 tar -zxf python.tar.gz
 mv python python_standalone
@@ -81,8 +82,8 @@ try:
     parsed = Version(base)
 except InvalidVersion as exc:
     raise SystemExit(f"invalid torch version string '{ver}': {exc}")
-if parsed < Version("2.10.0"):
-    raise SystemExit(f"torch was downgraded to {ver}, expected >=2.10.0")
+if parsed < Version("2.10.0.dev0"):
+    raise SystemExit(f"torch was downgraded to {ver}, expected >=2.10.0.dev0")
 if "cu130" not in ver:
     raise SystemExit(f"torch build is not cu130: {ver}")
 print(f"PyTorch {ver} verified")
@@ -102,7 +103,7 @@ try:
     parsed = Version(base)
 except InvalidVersion as exc:
     raise SystemExit(f"invalid torch version string '{ver}': {exc}")
-if parsed < Version("2.10.0"):
+if parsed < Version("2.10.0.dev0"):
     raise SystemExit(f"torch recovery reinstall failed, got {ver}")
 if "cu130" not in ver:
     raise SystemExit(f"torch recovery reinstall not cu130: {ver}")
@@ -147,15 +148,32 @@ $pip_exe install -r "$workdir"/pak5.txt
 echo "=== Installing pak6.txt ==="
 $pip_exe install -r "$workdir"/pak6.txt
 
-# Guarded install: dlib (cp312 wheel may be skipped on Python 3.13)
+# Guarded install: dlib (cp313 on Python 3.13, cp312 otherwise)
 echo "=== Attempting dlib ==="
-$pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp312-cp312-win_amd64.whl || echo "WARNING: dlib install failed or is incompatible with Python 3.13"
+py_version=$("$workdir"/python_standalone/python.exe -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+if [[ "$py_version" == "3.13" ]]; then
+    echo "Python 3.13 detected, attempting dlib cp313 wheel"
+    if ! $pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp313-cp313-win_amd64.whl; then
+        echo "WARNING: dlib cp313 install failed, attempting cp312 fallback"
+        $pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp312-cp312-win_amd64.whl || echo "WARNING: dlib install failed or is incompatible with Python 3.13"
+    fi
+else
+    echo "Python $py_version detected, installing dlib cp312 wheel"
+    $pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0-alpha/dlib-20.0.0-cp312-cp312-win_amd64.whl || echo "WARNING: dlib install failed"
+fi
 
-# Guarded install: insightface (prefer cp313, fallback to cp312 if needed)
+# Guarded install: insightface (prefer cp313 on Python 3.13, fallback to cp312)
 echo "=== Attempting insightface ==="
-if ! $pip_exe install https://raw.githubusercontent.com/Gourieff/Assets/606558ed08f16b99a29ef30b0df0b4622164c524/Insightface/insightface-0.7.3-cp313-cp313-win_amd64.whl#sha256=7aa0ce24bc76a31d48b22f5ced38f344a857bc7d6a56071e4f23ab033a638f1c; then
-    echo "WARNING: insightface cp313 wheel unavailable or incompatible, attempting cp312 fallback"
-    $pip_exe install https://raw.githubusercontent.com/Gourieff/Assets/606558ed08f16b99a29ef30b0df0b4622164c524/Insightface/insightface-0.7.3-cp312-cp312-win_amd64.whl#sha256=4e58a504433ba5a500d48328689e7d6c69873165653ded7553ce804beb8723db || echo "WARNING: insightface install failed or is incompatible with Python 3.13"
+py_version=$("$workdir"/python_standalone/python.exe -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+if [[ "$py_version" == "3.13" ]]; then
+    echo "Python 3.13 detected, attempting insightface cp313 wheel"
+    if ! $pip_exe install https://raw.githubusercontent.com/Gourieff/Assets/606558ed08f16b99a29ef30b0df0b4622164c524/Insightface/insightface-0.7.3-cp313-cp313-win_amd64.whl#sha256=7aa0ce24bc76a31d48b22f5ced38f344a857bc7d6a56071e4f23ab033a638f1c; then
+        echo "WARNING: insightface cp313 wheel unavailable or incompatible, attempting cp312 fallback"
+        $pip_exe install https://raw.githubusercontent.com/Gourieff/Assets/606558ed08f16b99a29ef30b0df0b4622164c524/Insightface/insightface-0.7.3-cp312-cp312-win_amd64.whl#sha256=4e58a504433ba5a500d48328689e7d6c69873165653ded7553ce804beb8723db || echo "WARNING: insightface install failed"
+    fi
+else
+    echo "Python $py_version detected, installing insightface cp312 wheel"
+    $pip_exe install https://raw.githubusercontent.com/Gourieff/Assets/606558ed08f16b99a29ef30b0df0b4622164c524/Insightface/insightface-0.7.3-cp312-cp312-win_amd64.whl#sha256=4e58a504433ba5a500d48328689e7d6c69873165653ded7553ce804beb8723db || echo "WARNING: insightface install failed"
 fi
 
 # Guarded install: cupy for CUDA 13.0 (try cuda13x first, fallback to cuda12x)
@@ -216,8 +234,8 @@ try:
     parsed = Version(base)
 except InvalidVersion as exc:
     raise SystemExit(f"ERROR: torch version string '{ver}' is invalid: {exc}")
-if parsed < Version("2.10.0"):
-    raise SystemExit(f"ERROR: torch is {ver}, expected >=2.10.0 with cu130 build")
+if parsed < Version("2.10.0.dev0"):
+    raise SystemExit(f"ERROR: torch is {ver}, expected >=2.10.0.dev0 with cu130 build")
 if "cu130" not in ver:
     raise SystemExit(f"ERROR: torch build is not cu130: {ver}")
 print("[OK] PyTorch cu130 2.10+ verified")

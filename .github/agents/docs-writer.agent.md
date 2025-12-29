@@ -13,7 +13,7 @@ README/docs updates for install/run modes, stable vs nightly builds, launchers, 
 
 ## Key Topics to Document
 - Installation procedures for both stable and nightly builds
-- Launcher options: maximum fidelity vs optimized fidelity
+- Launcher options (run_nvidia_gpu.bat, run_cpu.bat)
 - Port configuration (default 8188)
 - Portable paths and directory structure
 - Performance wheel best-effort policy
@@ -26,9 +26,3 @@ README/docs updates for install/run modes, stable vs nightly builds, launchers, 
 - Document port 8188 as default; do not suggest changing it
 - Keep examples Windows-portable (no Unix-only commands)
 - Explain best-effort perf wheel policy (warn if missing, don't fail)
-
-## Good output example
-| Launcher | Use Case | Flags |
-|----------|----------|-------|
-| `run_maximum_fidelity.bat` | Production renders | `--disable-xformers --disable-smart-memory` |
-| `run_optimized_fidelity.bat` | Fast iteration | (default perf optimizations enabled) |
