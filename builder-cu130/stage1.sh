@@ -68,7 +68,7 @@ PYVER
 then
     echo "WARNING: PyTorch version check failed, reinstalling PyTorch nightly"
     $pip_exe install --force-reinstall --no-deps -r "$workdir"/pak3.txt
-    "$workdir"/python_standalone/python.exe - <<'PYVER'
+    "$workdir"/python_standalone/python.exe - <<'PYVER' || { echo "ERROR: PyTorch recovery reinstall verification failed"; exit 1; }
 from packaging.version import Version
 import torch
 
@@ -124,7 +124,7 @@ $pip_exe install https://github.com/eddiehe99/dlib-whl/releases/download/v20.0.0
 
 # Guarded install: insightface (cp312 wheel may be skipped on Python 3.13)
 echo "=== Attempting insightface ==="
-$pip_exe install https://github.com/Gourieff/Assets/raw/refs/heads/main/Insightface/insightface-0.7.3-cp312-cp312-win_amd64.whl || echo "WARNING: insightface install failed or is incompatible with Python 3.13"
+$pip_exe install https://raw.githubusercontent.com/Gourieff/Assets/606558ed08f16b99a29ef30b0df0b4622164c524/Insightface/insightface-0.7.3-cp312-cp312-win_amd64.whl#sha256=4e58a504433ba5a500d48328689e7d6c69873165653ded7553ce804beb8723db || echo "WARNING: insightface install failed or is incompatible with Python 3.13"
 
 # Guarded install: cupy for CUDA 13.0 (try cuda13x first, fallback to cuda12x)
 echo "=== Attempting cupy-cuda13x (fallback to cuda12x if unavailable) ==="
