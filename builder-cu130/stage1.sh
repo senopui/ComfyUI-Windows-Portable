@@ -10,11 +10,12 @@ export PIP_NO_WARN_SCRIPT_LOCATION=0
 
 ls -lahF
 
-# Download Python 3.13 Standalone (pinned for runtime compatibility and supply-chain security)
-echo "=== Downloading Python 3.13.11+20251205 standalone build ==="
-curl -sSL \
-    https://github.com/astral-sh/python-build-standalone/releases/download/20251205/cpython-3.13.11%2B20251205-x86_64-pc-windows-msvc-install_only.tar.gz \
-    -o python.tar.gz
+# Download Python 3.13 Standalone (workflow-resolved, fallback to pinned)
+python_url_default="https://github.com/astral-sh/python-build-standalone/releases/download/20251205/cpython-3.13.11%2B20251205-x86_64-pc-windows-msvc-install_only.tar.gz"
+python_url="${PYTHON_STANDALONE_URL:-$python_url_default}"
+echo "=== Downloading Python 3.13 standalone build ==="
+echo "Source: $python_url"
+curl -sSL "$python_url" -o python.tar.gz
 tar -zxf python.tar.gz
 mv python python_standalone
 

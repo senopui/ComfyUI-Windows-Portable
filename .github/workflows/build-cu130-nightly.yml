@@ -18,6 +18,31 @@ jobs:
     steps:
         - uses: actions/checkout@v6
 
+        - name: Resolve latest Python 3.13 standalone build
+          shell: bash
+          run: |
+            default_url="https://github.com/astral-sh/python-build-standalone/releases/download/20251205/cpython-3.13.11%2B20251205-x86_64-pc-windows-msvc-install_only.tar.gz"
+            api="https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=5"
+            url=$(curl -fsSL "$api" | python - <<'PY'
+import json, sys, re
+pattern = re.compile(r"cpython-3\.13\.\d+\+\d+-x86_64-pc-windows-msvc-install_only\.tar\.gz$")
+for release in json.load(sys.stdin):
+    for asset in release.get("assets", []):
+        name = asset.get("name") or ""
+        if pattern.fullmatch(name):
+            print(asset.get("browser_download_url", ""))
+            sys.exit(0)
+sys.exit(1)
+PY
+            ) || url=""
+            if [ -z "$url" ]; then
+              echo "WARNING: Falling back to pinned Python build"
+              url="$default_url"
+            else
+              echo "Resolved Python build: $url"
+            fi
+            echo "PYTHON_STANDALONE_URL=$url" >> "$GITHUB_ENV"
+
         - name: Stage 1 Gathering Dependencies
           shell: bash
           working-directory: builder-cu130
