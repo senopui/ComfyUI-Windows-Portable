@@ -29,55 +29,6 @@ The nightly builds include cutting-edge performance optimization libraries from 
 
 Nightly builds run automatically at 02:00 UTC daily via GitHub Actions. They can also be triggered manually through the GitHub Actions interface.
 
-== Launcher Scripts
-
-Two specialized launcher scripts are included in the nightly builds:
-
-=== run_maximum_fidelity.bat
-
-Optimized for maximum image quality and consistency.
-
-**Flags:**
-----
---disable-xformers
---disable-smart-memory
-----
-
-**Use Cases:**
-* Final production renders
-* Quality comparison testing
-* Archival work
-* When absolute consistency is required
-
-**Trade-offs:**
-* Slower performance
-* Higher memory usage
-* Maximum precision and fidelity
-
-=== run_optimized_fidelity.bat
-
-Balanced performance and quality with all bleeding-edge optimizations enabled.
-
-**Flags:**
-----
-(none - uses default optimizations)
-----
-
-**Features:**
-* Automatically uses xformers/FlashAttention when available
-* Smart memory management enabled
-* SageAttention integration when available
-
-**Use Cases:**
-* Interactive workflows
-* Rapid iteration and experimentation
-* General-purpose usage
-* Best overall performance
-
-**Trade-offs:**
-* Slight precision differences in some edge cases
-* Optimal speed and memory efficiency
-
 == CI/CD Pipeline
 
 The nightly build workflow includes comprehensive validation:
@@ -97,8 +48,7 @@ The nightly build workflow includes comprehensive validation:
    * Runs quick test with --cpu flag
 
 3. **Validation Steps**
-   * Tests maximum fidelity launcher configuration
-   * Tests optimized fidelity launcher configuration
+   * Runs quick test with CPU flag
    * Captures logs and checks for tracebacks
    * Fails build if errors are detected
 
@@ -114,9 +64,9 @@ The nightly build workflow includes comprehensive validation:
 
 === Validation Logic
 
-Each launcher configuration is tested with:
+The build is tested with:
 ----
-timeout 120 ./python_standalone/python.exe -s ComfyUI/main.py --cpu --windows-standalone-build [FLAGS] --quick-test-for-ci
+timeout 120 ./python_standalone/python.exe -s ComfyUI/main.py --cpu --windows-standalone-build --quick-test-for-ci
 ----
 
 Logs are captured and analyzed for:
