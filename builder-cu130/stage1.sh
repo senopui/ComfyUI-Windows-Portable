@@ -9,6 +9,8 @@ export PYTHONPYCACHEPREFIX="${workdir}/pycache1"
 export PIP_NO_WARN_SCRIPT_LOCATION=0
 export GIT_TERMINAL_PROMPT=0
 export PIP_NO_INPUT=1
+export PIP_ONLY_BINARY=numpy
+export PIP_DISABLE_PIP_VERSION_CHECK=1
 
 if [[ -n "${GITHUB_TOKEN:-}" ]]; then
     git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
@@ -202,8 +204,8 @@ echo "=== Installing pak7.txt ==="
 $pip_exe install --only-binary=numpy -r "$workdir"/pak7.txt
 
 echo "=== NumPy sanity check (post pak7) ==="
-if ! "$workdir"/python_standalone/python.exe -c "import numpy as np; print(np.__version__)"; then
-    echo "ERROR: NumPy import failed after pak7 install; aborting"
+if ! "$workdir"/python_standalone/python.exe -c "import numpy as np, torch; a=np.zeros((1,),dtype=np.float32); t=torch.from_numpy(a); print('numpy',np.__version__,'torch',torch.__version__,'ok',t.shape)"; then
+    echo "ERROR: NumPy/Torch interop failed (possible ABI mismatch)"
     exit 1
 fi
 
