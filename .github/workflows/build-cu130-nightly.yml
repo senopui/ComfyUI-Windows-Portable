@@ -29,6 +29,11 @@ jobs:
           working-directory: builder-cu130
           run: bash stage1.sh
 
+        - name: Attempt xformers install (best effort)
+          shell: pwsh
+          working-directory: builder-cu130
+          run: ./scripts/attempt_install_xformers.ps1
+
         - name: Stage 2 Assembling Repositories
           shell: bash
           working-directory: builder-cu130
