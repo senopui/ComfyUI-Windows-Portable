@@ -45,7 +45,7 @@ function Parse-JsonSafe {
   $preview = if ($trimmed.Length -gt 200) { $trimmed.Substring(0, 200) } else { $trimmed }
 
   if (-not $trimmed) {
-    Write-Warning "JSON parse skipped for $Source: empty response."
+    Write-Warning "JSON parse skipped for ${Source}: empty response."
     return [pscustomobject]@{
       ok = $false
       reason = "empty response"
@@ -56,7 +56,7 @@ function Parse-JsonSafe {
 
   if (-not ($trimmed.StartsWith("{") -or $trimmed.StartsWith("["))) {
     $reason = if ($trimmed.StartsWith("<")) { "HTML response detected" } else { "non-JSON output detected" }
-    Write-Warning "JSON parse skipped for $Source: $reason."
+    Write-Warning "JSON parse skipped for ${Source}: $reason."
     return [pscustomobject]@{
       ok = $false
       reason = $reason
@@ -73,7 +73,7 @@ function Parse-JsonSafe {
       source = $Source
     }
   } catch {
-    Write-Warning "JSON parse failed for $Source: $($_.Exception.Message)"
+    Write-Warning "JSON parse failed for ${Source}: $($_.Exception.Message)"
     return [pscustomobject]@{
       ok = $false
       reason = "ConvertFrom-Json failed: $($_.Exception.Message)"

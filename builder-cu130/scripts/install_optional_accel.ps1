@@ -428,7 +428,7 @@ try {
       Write-Warning "Skipping SpargeAttn installs because torch nightly cu130 is not present."
       $spargeTorchReady = $false
     } else {
-      $ghUrl = Resolve-GitHubReleaseWheelUrl -Python $python -Repository "woct0rdho/SpargeAttn" -PackagePattern "(spas|sparse).*sage.*attn.*\.whl"
+      $ghUrl = Resolve-GitHubReleaseWheelUrl -Python $python -Repository "thu-ml/SpargeAttn" -PackagePattern "(spas|sparse).*sage.*attn.*\.whl"
       if ($ghUrl) {
         $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from GitHub release" -Arguments @("install", "--no-deps", "--force-reinstall", $ghUrl)
         if ($installAttempt.Success) {
@@ -440,6 +440,54 @@ try {
         }
       } else {
         $spargeErrors += "GitHub release wheel unavailable"
+      }
+    }
+  }
+
+  if (-not $spargeSuccess -and $spargeNightlyEnabled -and $spargeTorchReady) {
+    $nvccPath = (Get-Command nvcc -ErrorAction SilentlyContinue).Source
+    if (-not $nvccPath -and $env:CUDA_HOME) {
+      $candidate = Join-Path $env:CUDA_HOME "bin/nvcc.exe"
+      if (Test-Path $candidate) {
+        $nvccPath = $candidate
+      }
+    }
+    if (-not $nvccPath) {
+      $spargeErrors += "nvcc not found; set CUDA_HOME or install CUDA toolkit"
+      Write-Warning "GATED: SpargeAttn source build skipped (nvcc not found)"
+    } else {
+      $buildTools = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn build prerequisites" -Arguments @("install", "--upgrade", "ninja", "build", "setuptools", "wheel")
+      if (-not $buildTools.Success) {
+        $spargeErrors += $buildTools.Error
+      } else {
+        $spargeRepo = Join-Path $root "spargeattn-src"
+        if (Test-Path $spargeRepo) {
+          Remove-Item -Path $spargeRepo -Recurse -Force
+        }
+        $cloneOutput = & git clone --depth 1 https://github.com/thu-ml/SpargeAttn $spargeRepo 2>&1 | Out-String
+        if ($cloneOutput) {
+          Write-Host $cloneOutput.TrimEnd()
+        }
+        if ($LASTEXITCODE -ne 0) {
+          $spargeErrors += "SpargeAttn git clone failed"
+        } else {
+          Push-Location $spargeRepo
+          try {
+            $installOutput = & $python -s -m pip install -e . --no-deps --no-build-isolation 2>&1 | Out-String
+            if ($installOutput) {
+              Write-Host $installOutput.TrimEnd()
+            }
+            if ($LASTEXITCODE -ne 0) {
+              $spargeErrors += "SpargeAttn source install failed"
+            } else {
+              $spargeSource = "source"
+              $spargeSuccess = $true
+              $spargeErrors = @()
+            }
+          } finally {
+            Pop-Location
+          }
+        }
       }
     }
   }
@@ -473,67 +521,6 @@ try {
       }
     } else {
       $spargeErrors += "AI-windows-whl wheel unavailable"
-    }
-  }
-
-  if (-not $spargeSuccess -and $spargeNightlyEnabled -and $spargeTorchReady) {
-    $nvccPath = (Get-Command nvcc -ErrorAction SilentlyContinue).Source
-    if (-not $nvccPath -and $env:CUDA_HOME) {
-      $candidate = Join-Path $env:CUDA_HOME "bin/nvcc.exe"
-      if (Test-Path $candidate) {
-        $nvccPath = $candidate
-      }
-    }
-    if (-not $nvccPath) {
-      $spargeErrors += "nvcc not found; set CUDA_HOME or install CUDA toolkit"
-      Write-Warning "GATED: SpargeAttn source build skipped (nvcc not found)"
-    } else {
-      $buildTools = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn build prerequisites" -Arguments @("install", "--upgrade", "ninja", "build", "setuptools", "wheel")
-      if (-not $buildTools.Success) {
-        $spargeErrors += $buildTools.Error
-      } else {
-        $spargeRepo = Join-Path $root "spargeattn-src"
-        if (Test-Path $spargeRepo) {
-          Remove-Item -Path $spargeRepo -Recurse -Force
-        }
-        $cloneOutput = & git clone --depth 1 https://github.com/thu-ml/SpargeAttn $spargeRepo 2>&1 | Out-String
-        if ($cloneOutput) {
-          Write-Host $cloneOutput.TrimEnd()
-        }
-        if ($LASTEXITCODE -ne 0) {
-          $spargeErrors += "SpargeAttn git clone failed"
-        } else {
-          Push-Location $spargeRepo
-          try {
-            if (Test-Path "dist") {
-              Remove-Item -Path "dist" -Recurse -Force
-            }
-            $wheelOutput = & $python -s -m pip wheel . -w dist --no-deps --no-build-isolation 2>&1 | Out-String
-            if ($wheelOutput) {
-              Write-Host $wheelOutput.TrimEnd()
-            }
-            if ($LASTEXITCODE -ne 0) {
-              $spargeErrors += "SpargeAttn wheel build failed"
-            } else {
-              $wheel = Get-ChildItem -Path "dist" -Filter "*.whl" | Sort-Object Name | Select-Object -Last 1
-              if (-not $wheel) {
-                $spargeErrors += "SpargeAttn wheel not found after build"
-              } else {
-                $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from source build" -Arguments @("install", "--no-deps", "--force-reinstall", $wheel.FullName)
-                if ($installAttempt.Success) {
-                  $spargeSource = "source"
-                  $spargeSuccess = $true
-                  $spargeErrors = @()
-                } else {
-                  $spargeErrors += $installAttempt.Error
-                }
-              }
-            }
-          } finally {
-            Pop-Location
-          }
-        }
-      }
     }
   }
   }

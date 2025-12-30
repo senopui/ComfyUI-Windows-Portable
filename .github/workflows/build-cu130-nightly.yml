@@ -36,6 +36,24 @@ jobs:
             SKIP_SPARGEATTN: "1"
           run: bash stage1.sh
 
+        - name: PowerShell parse preflight (attention installers)
+          shell: pwsh
+          working-directory: builder-cu130
+          run: |
+            $scripts = @(
+              "./scripts/install_core_attention.ps1",
+              "./scripts/install_optional_accel.ps1"
+            )
+            foreach ($script in $scripts) {
+              try {
+                [scriptblock]::Create((Get-Content -Raw $script)) | Out-Null
+                Write-Host "Parse OK: $script"
+              } catch {
+                Write-Error "PowerShell parse failed for $script: $($_.Exception.Message)"
+                exit 1
+              }
+            }
+
         - name: Install core attention stack (manifested)
           shell: pwsh
           working-directory: builder-cu130
