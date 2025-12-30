@@ -144,8 +144,12 @@ echo "=== Attempting nunchaku from AI-windows-whl ==="
 $pip_exe install nunchaku --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: nunchaku binary wheel not available for this Python+PyTorch+CUDA combination"
 
 # Guarded install: spargeattention via AI-windows-whl
-echo "=== Attempting spargeattention from AI-windows-whl ==="
-$pip_exe install spargeattention --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: spargeattention binary wheel not available for this Python+PyTorch+CUDA combination"
+if [[ -n "${SKIP_SPARGEATTN:-}" ]]; then
+    echo "=== Skipping spargeattention install (managed separately) ==="
+else
+    echo "=== Attempting spargeattention from AI-windows-whl ==="
+    $pip_exe install spargeattention --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: spargeattention binary wheel not available for this Python+PyTorch+CUDA combination"
+fi
 
 # Guarded install: bitsandbytes
 echo "=== Attempting bitsandbytes ==="
