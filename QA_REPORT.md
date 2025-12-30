@@ -1,93 +1,118 @@
-# QA Report
+# QA_REPORT (Final)
+- Date: 2025-12-30
+- Repo / branch: /workspace/ComfyUI-Windows-Portable @ qa/final-qc-20251230
+- Commit SHA: ffc88d4f7c9ccb00a317c87701ca81f900717670
+- Scope: cu130 + cu130-nightly
 
-## Upstream Sync
-- Upstream: `https://github.com/YanWenKun/ComfyUI-Windows-Portable` (default branch `main`)
-- Before sync SHA: `e906265c2f45cf1470549a8f14438da225d65f05`
-- After sync SHA: `ea7bc5ca56bb0fc3223634767c89a4d3e3a25fc9`
-- Notable upstream changes: workflow/test-build improvements and builder updates; no breaking dependency changes noted.
+## Executive Summary
+- Overall status: **FAIL (WORKFLOW ERROR)**
+- Local/static verification completed (YAML parsing, shell syntax, Python compileall). Checkout logs were reviewed from attached CI log exports. Both cu130 and cu130-nightly workflows failed early because `builder-cu130/scripts/resolve_python.ps1` raised a PowerShell parser error; fix included in this PR, but CI has not been re-run in this environment. Artifact verification remains unavailable because this checkout has no `origin` remote or GitHub metadata configured.
 
-## CI Failure Evidence (CUDA 13.0 Nightly)
-| Run Date (UTC) | Run ID | Failing Step | Error Excerpt | Failure Class |
-| --- | --- | --- | --- | --- |
-| 2025-12-21 | [20403953035](https://github.com/senopui/ComfyUI-Windows-Portable/actions/runs/20403953035) | Stage 1 Gathering Dependencies | `UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>` during torch nightly verification in `builder-cu130/stage1.sh` line 166 | Encoding/locale |
-| 2025-12-20 | [20388197571](https://github.com/senopui/ComfyUI-Windows-Portable/actions/runs/20388197571) | Stage 1 Gathering Dependencies | `UnicodeEncodeError: 'charmap' codec can't encode character '\\u2713' in position 0: character maps to <undefined>` - Same root cause as above | Encoding/locale |
-| 2025-12-19 | [20358633634](https://github.com/senopui/ComfyUI-Windows-Portable/actions/runs/20358633634) | Stage 1 Gathering Dependencies | `UnicodeEncodeError: 'charmap' codec can't encode character '\\u2713' in position 0: character maps to <undefined>` - Same root cause as above | Encoding/locale |
+## Test Matrix
+| Check | Evidence | Status |
+| --- | --- | --- |
+| Local static checks (yaml, shell, python compileall) | **git status:** `## qa/final-qc-20251230`  \
+**workflows list:** `build-cu128.yml, build-cu130.yml, build-cu130-nightly.yml, build.yml, copilot-setup-steps.yml, scorecard.yml, test-build.yml`  \
+**YAML parse:** `workflows: 7` + each file `ok` via PyYAML  \
+**bash -n:** ran on 7 shell scripts (no errors)  \
+**compileall:** `scripts/preflight_accel.py`, `scripts/qa_validate_workflow.py`, builder attachments compiled | PASS |
+| CI: cu130 workflow run (URL, status) | FAILED — log export `logs_53235648285.zip` shows `ParserError` in `builder-cu130/scripts/resolve_python.ps1:44` (`Variable reference is not valid` from `$ShaUrl:`). | FAIL |
+| CI: cu130-nightly workflow run (URL, status) | FAILED — log export `logs_53235644142.zip` shows the same `ParserError` in `builder-cu130/scripts/resolve_python.ps1:44`. | FAIL |
+| Artifact verification (downloaded? contents verified?) | NOT RUN — no CI run artifacts accessible from this environment. | NOT RUN |
+| Regression signature scan (log search) | NOT RUN — no CI logs available to search. | NOT RUN |
+| Checkout logs review | Reviewed attached log exports (`logs_53235644142.zip`, `logs_53235648285.zip`): actions/checkout@v6 ran with `fetch-depth: 1`, `fetch-tags: false`, `clean: true`, and checked out `ffc88d4f7c9ccb00a317c87701ca81f900717670` without errors. | PASS |
 
-Root cause: cp1252 encoding on Windows runners could not emit the checkmark (✓) used in torch cu130 nightly assertion logging. The error occurred when Python's print() statement attempted to output the Unicode character U+2713 (✓) to a console using Windows-1252 encoding.
+## Key Findings
+### Fixed items
+- Fixed PowerShell parser error in `builder-cu130/scripts/resolve_python.ps1` caused by `$ShaUrl:` string interpolation; this error broke both cu130 and cu130-nightly workflows during Python resolution. (Re-run CI to confirm.)
 
-## Fixes & Hardening
-- Replaced the non-ASCII checkmark (✓) in `builder-cu130/stage1.sh` torch cu130 nightly assertion output with `[OK]` to avoid cp1252 encoding failures.
-- Replaced non-ASCII checkmarks (✓ and ✗) in `.github/workflows/copilot-setup-steps.yml` with ASCII equivalents (`OK` and `FAIL`).
-- Restored full environment setup (setlocal, PATH, PYTHONPYCACHEPREFIX) in `builder/attachments/ExtraScripts/run_cpu.bat` and `builder-cu128/attachments/ExtraScripts/run_cpu.bat` to ensure custom nodes requiring git can access MinGit.
-- Restored `-B` flag to Python invocations in `builder/attachments/ExtraScripts/run_nvidia_gpu.bat` and `builder-cu128/attachments/ExtraScripts/run_nvidia_gpu.bat` to prevent .pyc file writes.
-- Added artifact layout validation to the CUDA 13 nightly workflow to fail fast if the packaged portable tree is incomplete.
+### Gated/optional items
+- Optional accelerator installs are best-effort in cu130-nightly (and partially in cu130 stage1). Missing wheels are logged as **GATED** without failing the workflow; results are captured in `builder-cu130/accel_manifest.json`, and runtime preflight writes/extends the manifest plus disables dependent custom nodes when missing. (See `builder-cu130/scripts/install_optional_accel.ps1` and `scripts/preflight_accel.py`.)
+- `SAGEATTENTION2PP_PACKAGE` is an opt-in environment variable; when unset, SageAttention2++ is explicitly gated with a warning in `builder-cu130/scripts/install_core_attention.ps1`.
 
-## New QA Assets
-- `scripts/qa_smoketest_windows.ps1`: CPU headless smoke test; logs to `<portable>/logs/qa-smoketest.log`; fails on Traceback/import/DLL errors.
-  - **LIMITATION**: This CPU smoke test does NOT validate GPU extension loading (e.g., CUDA, xformers, flash-attention). It only confirms that ComfyUI can start without import errors on CPU mode.
-  - Optional: set `QA_DISABLE_WINDOWS_STANDALONE=1` to skip the `--windows-standalone-build` flag if running against a non-portable install.
-- `scripts/qa_validate_workflow.py`: Validates node availability for `tests/workflows/minimal_text2img.json`.
-  - **LIMITATION**: This validator only checks base ComfyUI nodes present in the core repository. It does NOT validate custom nodes from `custom_nodes/` directory.
-- `tests/workflows/minimal_text2img.json`: Minimal text-to-image workflow fixture for validation.
-- Windows CI smoke test added to `.github/workflows/test-build.yml` (runs `scripts/qa_smoketest_windows.ps1` on `windows-latest`).
+### Open Issues
+- **Severity: High** — cu130 / cu130-nightly workflows failed during Python resolution.
+  - **Symptom:** Both workflows exit with `ParserError` in `builder-cu130/scripts/resolve_python.ps1:44`.
+  - **Where observed:** attached log exports `logs_53235644142.zip` and `logs_53235648285.zip`.
+  - **Likely cause:** PowerShell variable interpolation with a trailing colon (`$ShaUrl:`) invalid for parser.
+  - **Recommended fix PR (this change):** use `${ShaUrl}` in the warning string and re-run CI.
+- **Severity: Medium** — CI verification unavailable in this environment.
+  - **Symptom:** Workflow reruns, artifacts, and regression scans cannot be confirmed locally.
+  - **Where observed:** local repo has no `origin` remote; GitHub Actions runs cannot be queried here.
+  - **Likely cause:** checkout does not include remote metadata or credentials.
+  - **Recommended fix PR (future):** Re-run `build-cu130.yml` and `build-cu130-nightly.yml` and update QA_REPORT with run URLs, artifacts, and regression signature scans.
 
-## Commands to Run Manually
-- CUDA nightly build: `bash builder-cu130/stage1.sh && bash builder-cu130/stage2.sh && bash builder-cu130/stage3.sh`
-- Artifact validation (workflow step): run job “Build & Upload CUDA 13.0 Nightly Package”.
-- CPU smoke test: `pwsh ./scripts/qa_smoketest_windows.ps1`
-- Workflow validation: `python ./scripts/qa_validate_workflow.py`
+## Release Readiness Checklist
+- [ ] cu130 green
+- [ ] cu130-nightly green OR explicitly gated
+- [ ] no mystery reds
+- [x] docs updated
+- [x] QA_REPORT accurate
 
-## Expected Outputs
-- Smoke test log: `<portable>/logs/qa-smoketest.log` contains no `Traceback`, `ImportError`, or DLL load errors.
-- Workflow validator prints `Workflow node validation passed.` and exits 0.
-- CUDA nightly build no longer fails on UnicodeEncodeError in Stage 1; proceeds to later stages unless other issues arise.
+### Evidence Snippets (local)
+```text
+$ git status -sb
+## qa/final-qc-20251230
+```
 
-## Dependency Versions
-Expected dependency versions for each builder configuration:
+```text
+$ python - <<'PY'
+from pathlib import Path
+import yaml
+paths = sorted(Path('.github/workflows').glob('*.yml'))
+print('workflows:', len(paths))
+for path in paths:
+    data = yaml.safe_load(path.read_text())
+    print(f'{path}:', 'ok' if isinstance(data, dict) else type(data))
+PY
+workflows: 7
+.github/workflows/build-cu128.yml: ok
+.github/workflows/build-cu130-nightly.yml: ok
+.github/workflows/build-cu130.yml: ok
+.github/workflows/build.yml: ok
+.github/workflows/copilot-setup-steps.yml: ok
+.github/workflows/scorecard.yml: ok
+.github/workflows/test-build.yml: ok
+```
 
-### builder-cu130 (CUDA 13.0 Nightly)
-- **Python**: 3.13.x (embedded in `python_standalone/`)
-- **PyTorch**: 2.11.0.dev (nightly) with CUDA 13.0 support (`cu130` in version string)
-- **CUDA Toolkit**: 13.0
-- **Key Performance Libraries**:
-  - xformers (nightly, post-cu130 PyTorch install)
-  - flash-attn (optional, guarded install)
-  - triton (typically included with PyTorch nightly)
+```text
+$ for f in $(find builder scripts -name '*.sh'); do echo "## $f"; bash -n "$f"; done
+## builder/stage3.sh
+## builder/stage2.sh
+## builder/generate-pak7.sh
+## builder/generate-pak5.sh
+## builder/stage1.sh
+## builder/attachments/ExtraScripts/force-update-all.sh
+## builder/attachments/备用脚本/force-update-cn.sh
+```
 
-### builder-cu128 (CUDA 12.8)
-- **Python**: 3.12.x (embedded in `python_standalone/`)
-- **PyTorch**: Compatible with CUDA 12.8
-- **CUDA Toolkit**: 12.8
+```text
+$ python -m compileall builder scripts
+Listing 'builder'...
+...
+Compiling 'scripts/preflight_accel.py'...
+Compiling 'scripts/qa_validate_workflow.py'...
+```
 
-### builder (Legacy/CPU)
-- **Python**: 3.12.x (embedded in `python_standalone/`)
-- **PyTorch**: CPU-only build
+```text
+$ find . -maxdepth 2 -name '*.log'
+```
 
-**Note**: Exact version numbers vary as nightly builds update daily. Stage 1 scripts verify PyTorch CUDA variant post-install. Run `python_standalone/python.exe -m pip list` in built portable tree to see installed versions.
+```text
+Attached log export excerpt (logs_53235648285.zip, build_upload/2_Run actions_checkout@v6.txt)
+2025-12-30T09:33:31.6495541Z   fetch-depth: 1
+2025-12-30T09:33:31.6496313Z   fetch-tags: false
+2025-12-30T09:33:31.6495182Z   clean: true
+2025-12-30T09:33:34.3214922Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +ffc88d4f7c9ccb00a317c87701ca81f900717670:refs/remotes/origin/main
+2025-12-30T09:33:34.9816387Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force -B main refs/remotes/origin/main
+2025-12-30T09:33:35.1261945Z ffc88d4f7c9ccb00a317c87701ca81f900717670
+```
 
-## Validation Status
-- **actionlint**: run locally (v1.7.9) – no issues.
-- **QA scripts (smoketest, workflow validator)**: **not run** in this environment because ComfyUI portable tree is not present. Commands to execute after build:
-  - `pwsh ./scripts/qa_smoketest_windows.ps1`
-  - `python ./scripts/qa_validate_workflow.py`
-- **CodeQL**: **not run** (current configuration did not detect analyzable language changes; rerun when supported-language code changes are present).
-- **GPU validation**: **not performed in CI** (Windows runners lack CUDA hardware); manual GPU validation required on physical hardware (see Manual QA section).
-
-## Manual QA (Windows 11 + NVIDIA, guidance)
-1. Run `scripts/qa_smoketest_windows.ps1` (expects ComfyUI portable tree with python_standalone and ComfyUI).
-2. Launch `run_nvidia_gpu.bat` and confirm web UI loads on port 8188; run a simple workflow (e.g., minimal_text2img.json with a valid checkpoint).
-3. Check `logs/` for absence of Tracebacks.
-
-## Remaining Risks
-- GPU inference not exercised in CI (Windows runners lack CUDA); manual GPU validation still required.
-- Artifact validation only checks presence of key files, not full runtime.
-- QA scripts not yet executed here; run post-build on Windows with assembled portable tree to confirm runtime.
-
-## Runtime Startup Log Triage
-**Source log**: `ComfyUI_Windows_portable-Running-Log.txt` (attached in PR comment on 2025-12-29). Re-run with logging enabled to generate `<portable>/logs/qa-smoketest.log` via `pwsh ./scripts/qa_smoketest_windows.ps1`.
-
-| Exception Signature | Module/Component | Optional/Required | Evidence | PR / Fix |
-| --- | --- | --- | --- | --- |
-| `ImportError: DLL load failed while importing _C` (xformers → `flash_attn_3`) | xformers / flash-attn interoperability; diffusers import path | Required for diffusers-backed nodes | `diffusers.models.attention_processor` → `xformers.ops` → `flash_attn_3` import fails; cascades into `ComfyUI-DepthCrafter-Nodes`, `ComfyUI-layerdiffuse`, `ComfyUI-TeaCache`, `ComfyUI_smZNodes` | Ensure cu130-compatible xformers + flash-attn wheels for Python 3.13; confirm ABI match with torch 2.11 nightly. |
-| `ModuleNotFoundError: No module named 'nunchaku'` | ComfyUI-nunchaku | Required for nunchaku nodes | `ComfyUI-nunchaku` logs show version mismatch and missing package after startup | Add/update nunchaku wheel in cu130 pak files; ensure version ≥ 1.0.0 per node requirement. |
-| `RuntimeError: Failed to import spas_sage_attn` | ComfyUI-RadialAttn (SpargeAttn) | Required for radial attention nodes | `ComfyUI-RadialAttn` fails after missing `spas_sage_attn` / `sparse_sageattn` | Add SpargeAttn wheel from woct0rdho builds to cu130 dependency list. |
+```text
+Attached log export excerpt (logs_53235648285.zip, 0_build_upload.txt)
+2025-12-30T09:33:40.9804636Z ParserError: D:\a\ComfyUI-Windows-Portable\ComfyUI-Windows-Portable\builder-cu130\scripts\resolve_python.ps1:44
+2025-12-30T09:33:40.9804636Z Line |
+2025-12-30T09:33:40.9804636Z   44 |     Write-Warning "Failed to fetch SHA256SUMS from $ShaUrl: $($_.Exce …
+2025-12-30T09:33:40.9804636Z     |                                                    ~~~~~~~~
+2025-12-30T09:33:40.9804636Z     | Variable reference is not valid. ':' was not followed by a valid variable name character.
+```
