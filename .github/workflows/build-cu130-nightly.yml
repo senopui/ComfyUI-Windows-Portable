@@ -28,14 +28,6 @@ jobs:
             Write-Host "Resolved Python URL: $env:PYTHON_STANDALONE_URL"
             Write-Host "Resolved Python SHA256: $env:PYTHON_STANDALONE_SHA256"
 
-        - name: Stage 1 Gathering Dependencies
-          shell: bash
-          working-directory: builder-cu130
-          env:
-            SKIP_CORE_ATTENTION: "0"
-            SKIP_SPARGEATTN: "0"
-          run: bash stage1.sh
-
         - name: PowerShell parse preflight (attention installers)
           shell: pwsh
           working-directory: builder-cu130
@@ -53,6 +45,14 @@ jobs:
                 exit 1
               }
             }
+
+        - name: Stage 1 Gathering Dependencies
+          shell: bash
+          working-directory: builder-cu130
+          env:
+            SKIP_CORE_ATTENTION: "0"
+            SKIP_SPARGEATTN: "0"
+          run: bash stage1.sh
 
         - name: Install core attention stack (manifested)
           shell: pwsh
