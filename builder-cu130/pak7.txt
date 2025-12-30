@@ -1,4 +1,6 @@
 aenum
+# audioop-lts restores audioop module (deprecated in Python 3.11, removed in Python 3.13; required by pydub)
+audioop-lts; python_version >= "3.13"
 black
 blend-modes
 decord
