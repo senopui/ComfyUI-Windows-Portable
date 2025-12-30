@@ -31,6 +31,6 @@ opencv-python
 opencv-python-headless
 
 # Who needs numpy1: 
-# 1. Jovimetrix (and 'cozy-comfyui' and 'blendmodes')
+# 1. Jovimetrix (and 'cozy_comfy'/'cozy_comfyui' and 'blendmodes')
 # 2. ComfyUI-SAM2
 # 3. ComfyUI-ReActor

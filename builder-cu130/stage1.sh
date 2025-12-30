@@ -235,11 +235,11 @@ if [[ -s "$workdir"/pak7_optional_vcs.txt ]]; then
         optional_vcs_status="success"
     else
         optional_vcs_error="pip install failed; optional dependencies skipped"
-        echo "WARNING: Optional cozy-comfy VCS installs failed; continuing"
+        echo "WARNING: Optional cozy_comfy/cozy_comfyui VCS installs failed; continuing"
     fi
 else
     optional_vcs_error="pak7_optional_vcs.txt missing or empty"
-    echo "WARNING: pak7_optional_vcs.txt missing or empty; skipping optional cozy-comfy installs"
+    echo "WARNING: pak7_optional_vcs.txt missing or empty; skipping optional cozy_comfy/cozy_comfyui installs"
 fi
 
 optional_vcs_success=false
@@ -254,8 +254,8 @@ cat > "$workdir"/vcs_optional_manifest.json <<EOF
   "success": ${optional_vcs_success},
   "error": "${optional_vcs_error}",
   "packages": [
-    { "name": "cozy-comfy", "optional": true },
-    { "name": "cozy-comfyui", "optional": true }
+    { "name": "cozy_comfy", "optional": true },
+    { "name": "cozy_comfyui", "optional": true }
   ]
 }
 EOF

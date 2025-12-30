@@ -20,5 +20,5 @@ E) No module named 'sparse_sageattn' — **NOT FOUND**
 E) Failed to import spas_sage_attn — **NOT FOUND**
 
 ## Other noteworthy log findings
-- Both logs show stage1 failure when `pip` attempted to clone `cozy-comfy` from GitHub and the process could not prompt for credentials.
+- Both logs show stage1 failure when `pip` attempted to clone `cozy_comfy`/`cozy_comfyui` from GitHub and the process could not prompt for credentials.
 - `flash-attn` and `spargeattention` wheels were unavailable for the cp313/torch-nightly/cu130 combination (skipped with warnings).
