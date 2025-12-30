@@ -104,6 +104,8 @@ function Test-PackageImport {
   $script = @"
 import base64, importlib, json, sys
 names = json.loads(base64.b64decode('$encoded'))
+if isinstance(names, str):
+    names = [names]
 errors = []
 for name in names:
     try:
