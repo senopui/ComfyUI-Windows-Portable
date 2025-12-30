@@ -33,6 +33,7 @@ jobs:
           working-directory: builder-cu130
           env:
             SKIP_CORE_ATTENTION: "1"
+            SKIP_SPARGEATTN: "1"
           run: bash stage1.sh
 
         - name: Install core attention stack (manifested)
@@ -51,6 +52,8 @@ jobs:
         - name: Install optional accelerators (best effort)
           shell: pwsh
           working-directory: builder-cu130
+          env:
+            SPARGEATTN_NIGHTLY: "1"
           run: ./scripts/install_optional_accel.ps1
 
         - name: Accelerator manifest summary

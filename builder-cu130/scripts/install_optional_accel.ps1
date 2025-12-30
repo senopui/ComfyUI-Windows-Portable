@@ -7,11 +7,15 @@ function Invoke-PipInstall {
     [string[]]$Arguments
   )
   Write-Host "=== $Label ==="
-  & $Python -s -m pip @Arguments
+  $output = & $Python -s -m pip @Arguments 2>&1 | Out-String
+  if ($output) {
+    Write-Host $output.TrimEnd()
+  }
   if ($LASTEXITCODE -eq 0) {
     return @{ Success = $true; Error = $null }
   }
-  return @{ Success = $false; Error = "pip exited with code $LASTEXITCODE" }
+  $errorMessage = if ($output) { "pip exited with code $LASTEXITCODE: $($output.Trim())" } else { "pip exited with code $LASTEXITCODE" }
+  return @{ Success = $false; Error = $errorMessage }
 }
 
 function Get-PackageVersion {
@@ -231,6 +235,52 @@ function Resolve-GitHubReleaseWheelUrl {
   return $null
 }
 
+function Resolve-WildminderWheelUrl {
+  param(
+    [string]$Python,
+    [string]$PackageId,
+    [string]$PythonTag,
+    [string]$CudaTag
+  )
+  $wheelIndexUrl = "https://raw.githubusercontent.com/wildminder/AI-windows-whl/main/wheels.json"
+  Write-Host "=== Resolving wheels.json entry for $PackageId ($wheelIndexUrl) ==="
+  try {
+    $data = Invoke-RestMethod -Uri $wheelIndexUrl -UseBasicParsing
+    $package = $data.packages | Where-Object { $_.id -eq $PackageId } | Select-Object -First 1
+    if (-not $package) {
+      Write-Warning "Package '$PackageId' not found in wheels.json"
+      return $null
+    }
+    $wheels = @($package.wheels)
+    if (-not $wheels -or $wheels.Count -eq 0) {
+      Write-Warning "No wheels listed for '$PackageId' in wheels.json"
+      return $null
+    }
+    $matching = $wheels | Where-Object {
+      $url = $_.url
+      $pythonMatch = ($_.python_version -eq "3.13") -or ($url -match $PythonTag)
+      $cudaMatch = ($_.cuda_version -eq "13.0") -or ($_.cuda_version -eq "13") -or ($url -match $CudaTag)
+      $torchMatch = ($_.torch_version -match "dev|nightly") -or ($url -match "torch.*dev") -or ($url -match "torch.*nightly")
+      $pythonMatch -and $cudaMatch -and $torchMatch -and $url
+    }
+    if (-not $matching -or $matching.Count -eq 0) {
+      Write-Warning "No wheels matched cp313/torch-nightly/cu130 in wheels.json for $PackageId"
+      return $null
+    }
+    $urls = $matching | ForEach-Object { $_.url } | Where-Object { $_ }
+    $filtered = Filter-CompatibleWheelUrls -Python $Python -Urls $urls
+    if ($filtered.Count -eq 0) {
+      Write-Warning "No compatible wheels found in wheels.json for $PackageId"
+      return $null
+    }
+    $filtered = $filtered | Sort-Object
+    return $filtered[-1]
+  } catch {
+    Write-Warning "Failed to query wheels.json: $($_.Exception.Message)"
+  }
+  return $null
+}
+
 function Set-AvailabilityFlag {
   param(
     [string]$Name,
@@ -247,6 +297,7 @@ function Set-AvailabilityFlag {
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $python = Join-Path $root "python_standalone/python.exe"
 $manifestPath = Join-Path $root "accel_manifest.json"
+$spargeNightlyEnabled = $env:SPARGEATTN_NIGHTLY -eq "1"
 
 if (-not (Test-Path $python)) {
   throw "Python executable not found at $python"
@@ -361,6 +412,7 @@ try {
   $spargeSource = "none"
   $spargeVersion = $null
   $spargeSuccess = $false
+  $spargeTorchReady = $true
   $spargePackageInfo = Get-FirstPackageVersion -Python $python -PackageNames @("spas_sage_attn", "sparse_sageattn")
 
   if ($spargePackageInfo) {
@@ -370,22 +422,45 @@ try {
   }
 
   if (-not $spargeSuccess) {
-    $ghUrl = Resolve-GitHubReleaseWheelUrl -Python $python -Repository "woct0rdho/SpargeAttn" -PackagePattern "(spas|sparse).*sage.*attn.*\.whl"
-    if ($ghUrl) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from GitHub release" -Arguments @("install", "--no-deps", "--force-reinstall", $ghUrl)
+    $torchCheck = Test-TorchNightlyCu130 -Python $python
+    if (-not $torchCheck.Success) {
+      $spargeErrors += "Torch not nightly cu130 ($($torchCheck.Version))"
+      Write-Warning "Skipping SpargeAttn installs because torch nightly cu130 is not present."
+      $spargeTorchReady = $false
+    } else {
+      $ghUrl = Resolve-GitHubReleaseWheelUrl -Python $python -Repository "woct0rdho/SpargeAttn" -PackagePattern "(spas|sparse).*sage.*attn.*\.whl"
+      if ($ghUrl) {
+        $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from GitHub release" -Arguments @("install", "--no-deps", "--force-reinstall", $ghUrl)
+        if ($installAttempt.Success) {
+          $spargeSource = "github-release"
+          $spargeSuccess = $true
+          $spargeErrors = @()
+        } else {
+          $spargeErrors += $installAttempt.Error
+        }
+      } else {
+        $spargeErrors += "GitHub release wheel unavailable"
+      }
+    }
+  }
+
+  if (-not $spargeSuccess -and $spargeNightlyEnabled -and $spargeTorchReady) {
+    $wildminderUrl = Resolve-WildminderWheelUrl -Python $python -PackageId "spargeattn" -PythonTag "cp313" -CudaTag "cu130"
+    if ($wildminderUrl) {
+      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from wheels.json" -Arguments @("install", "--no-deps", "--force-reinstall", $wildminderUrl)
       if ($installAttempt.Success) {
-        $spargeSource = "github-release"
+        $spargeSource = "wheels-json"
         $spargeSuccess = $true
         $spargeErrors = @()
       } else {
         $spargeErrors += $installAttempt.Error
       }
     } else {
-      $spargeErrors += "GitHub release wheel unavailable"
+      $spargeErrors += "wheels.json wheel unavailable"
     }
   }
 
-  if (-not $spargeSuccess) {
+  if (-not $spargeSuccess -and $spargeTorchReady) {
     $aiUrl = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "(spas|sparse).*sage.*attn" -IndexUrl "https://ai-windows-whl.github.io/whl/"
     if ($aiUrl) {
       $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from AI-windows-whl" -Arguments @("install", "--no-deps", "--force-reinstall", $aiUrl)
@@ -401,27 +476,79 @@ try {
     }
   }
 
-  if (-not $spargeSuccess) {
-    $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from source (spas_sage_attn)" -Arguments @("install", "--no-binary", ":all:", "spas_sage_attn")
-    if ($installAttempt.Success) {
-      $spargeSource = "source"
-      $spargeSuccess = $true
-      $spargeErrors = @()
+  if (-not $spargeSuccess -and $spargeNightlyEnabled -and $spargeTorchReady) {
+    $nvccPath = (Get-Command nvcc -ErrorAction SilentlyContinue).Source
+    if (-not $nvccPath -and $env:CUDA_HOME) {
+      $candidate = Join-Path $env:CUDA_HOME "bin/nvcc.exe"
+      if (Test-Path $candidate) {
+        $nvccPath = $candidate
+      }
+    }
+    if (-not $nvccPath) {
+      $spargeErrors += "nvcc not found; set CUDA_HOME or install CUDA toolkit"
+      Write-Warning "GATED: SpargeAttn source build skipped (nvcc not found)"
     } else {
-      $spargeErrors += $installAttempt.Error
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from source (sparse_sageattn)" -Arguments @("install", "--no-binary", ":all:", "sparse_sageattn")
-      if ($installAttempt.Success) {
-        $spargeSource = "source"
-        $spargeSuccess = $true
-        $spargeErrors = @()
+      $buildTools = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn build prerequisites" -Arguments @("install", "--upgrade", "ninja", "build", "setuptools", "wheel")
+      if (-not $buildTools.Success) {
+        $spargeErrors += $buildTools.Error
       } else {
-        $spargeErrors += $installAttempt.Error
+        $spargeRepo = Join-Path $root "spargeattn-src"
+        if (Test-Path $spargeRepo) {
+          Remove-Item -Path $spargeRepo -Recurse -Force
+        }
+        $cloneOutput = & git clone --depth 1 https://github.com/thu-ml/SpargeAttn $spargeRepo 2>&1 | Out-String
+        if ($cloneOutput) {
+          Write-Host $cloneOutput.TrimEnd()
+        }
+        if ($LASTEXITCODE -ne 0) {
+          $spargeErrors += "SpargeAttn git clone failed"
+        } else {
+          Push-Location $spargeRepo
+          try {
+            if (Test-Path "dist") {
+              Remove-Item -Path "dist" -Recurse -Force
+            }
+            $wheelOutput = & $python -s -m pip wheel . -w dist --no-deps --no-build-isolation 2>&1 | Out-String
+            if ($wheelOutput) {
+              Write-Host $wheelOutput.TrimEnd()
+            }
+            if ($LASTEXITCODE -ne 0) {
+              $spargeErrors += "SpargeAttn wheel build failed"
+            } else {
+              $wheel = Get-ChildItem -Path "dist" -Filter "*.whl" | Sort-Object Name | Select-Object -Last 1
+              if (-not $wheel) {
+                $spargeErrors += "SpargeAttn wheel not found after build"
+              } else {
+                $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from source build" -Arguments @("install", "--no-deps", "--force-reinstall", $wheel.FullName)
+                if ($installAttempt.Success) {
+                  $spargeSource = "source"
+                  $spargeSuccess = $true
+                  $spargeErrors = @()
+                } else {
+                  $spargeErrors += $installAttempt.Error
+                }
+              }
+            }
+          } finally {
+            Pop-Location
+          }
+        }
       }
     }
   }
+  }
 
   if ($spargeSuccess) {
-    $importAttempt = Test-PackageImportAny -Python $python -ImportNames @("spas_sage_attn", "sparse_sageattn")
+    $spargeImportOutput = & $python -c "import spas_sage_attn; print('spas_sage_attn import OK')" 2>&1 | Out-String
+    if ($spargeImportOutput) {
+      Write-Host $spargeImportOutput.TrimEnd()
+    }
+    if ($LASTEXITCODE -ne 0) {
+      Write-Warning "SpargeAttn spas_sage_attn import failed: $($spargeImportOutput.Trim())"
+      $importAttempt = Test-PackageImportAny -Python $python -ImportNames @("spas_sage_attn", "sparse_sageattn")
+    } else {
+      $importAttempt = @{ Success = $true; Error = $null }
+    }
     if (-not $importAttempt.Success) {
       $spargeSuccess = $false
       $spargeErrors += $importAttempt.Error
