@@ -1,15 +1,14 @@
 # QA_REPORT (Final)
 - Date: 2025-12-30
-- Repo / branch: /workspace/ComfyUI-Windows-Portable @ qa/final-qc-20251230
-- Commit SHA: df510a2ddf102a638d7d5783263028b211d8e4da
+- Repo / branch: /workspace/ComfyUI-Windows-Portable @ fix/numpy-py313-no-sdist-20251230
+- Commit SHA: 4f9590f5324c44ce0b52af3883e7718b66bb26ee
 - Scope: cu130 + cu130-nightly
 
 ## Executive Summary
-- Overall status: **FAIL (CI FAILURES)**
-- Verified: local static checks (git status, workflow listing, YAML parse attempt, shell syntax, Python compileall).
-- CI logs supplied externally show both cu130 and cu130-nightly builds failed during stage1 when `pip` attempted to clone `cozy-comfy` and GitHub prompted for credentials in a non-interactive context.
-- Regression signature scan executed on the supplied CI logs; none of the required signatures were observed.
-- Artifacts were not produced due to the stage1 failures.
+- Overall status: **BLOCKED (CI PENDING)**
+- Root cause (from CI logs): `pak7.txt` pinned NumPy 1.x, so pip built numpy-1.26.4 from source on Python 3.13, uninstalled NumPy 2.x, then torch/numpy imports segfaulted (exit code 139).
+- Fix applied: NumPy pins split by Python version in `pak7.txt`, `pip` forced to use NumPy wheels only for pak7, and a post-pak7 NumPy import sanity check now fails fast with a clear error.
+- CI runs have not been executed in this environment; URLs and status are pending.
 
 ## Evidence Bundle
 - `qa_evidence/20251230/`
@@ -23,26 +22,21 @@
 ## Test Matrix
 | Check | Evidence | Status |
 | --- | --- | --- |
-| Local static checks (yaml, shell, python compileall) | `qa_evidence/20251230/01_local_checks.md` (CI URL: N/A — local check) | PASS |
-| CI: cu130 workflow run (URL, status) | `qa_evidence/20251230/02_ci_runs.md` (log bundle: `logs_53236406321.zip`) | FAIL |
-| CI: cu130-nightly workflow run (URL, status) | `qa_evidence/20251230/02_ci_runs.md` (log bundle: `logs_53236403191.zip`) | FAIL |
-| Artifact verification (downloaded? contents verified?) | `qa_evidence/20251230/04_artifacts.md` | NOT RUN (build failed before packaging) |
-| Regression signature scan (log search) | `qa_evidence/20251230/03_ci_log_signatures.md` | PASS (no required signatures found) |
+| Local static checks (yaml, shell, python compileall) | Not run in this change | NOT RUN |
+| CI: cu130 workflow run (URL, status) | Pending | NOT RUN |
+| CI: cu130-nightly workflow run (URL, status) | Pending | NOT RUN |
+| Artifact verification (downloaded? contents verified?) | Not run in this change | NOT RUN |
+| Regression signature scan (log search) | Not run in this change | NOT RUN |
 
 ## Key Findings
 ### Fixed items
-- None in this QA pass (documentation refresh only).
+- Guarded NumPy selection for Python 3.13 to prevent NumPy 1.x sdist installs, and added a NumPy import sanity check to fail fast if wheels are missing or broken.
 
 ### Gated/optional items
-- Documentation now explicitly calls out best-effort optional accelerator installs and manifest/preflight gating for nightly builds. (See `docs/nightly-builds.adoc` and `qa_evidence/20251230/05_docs_audit.md`.)
-- The supplied CI logs show `flash-attn` and `spargeattention` wheels were unavailable for cp313/torch-nightly/cu130 and were skipped with warnings (best-effort behavior).
+- Optional accelerator and VCS installs remain best-effort and are not allowed to fail the build.
 
 ### Open Issues
-- **Severity: High** — CI builds fail in stage1 due to `cozy-comfy` git clone prompting for credentials.
-  - **Symptom:** `fatal: Cannot prompt because user interactivity has been disabled` followed by `fatal: could not read Username for 'https://github.com'`.
-  - **Where observed:** `qa_evidence/20251230/02_ci_runs.md` (both cu130 and cu130-nightly logs).
-  - **Likely cause:** `pip` attempts to clone a GitHub dependency that now requires authentication or is rate-limited for anonymous access.
-  - **Suggested follow-up PR scope:** Update dependency acquisition to avoid interactive Git prompts (e.g., replace with a vetted wheel or ensure public access) and re-run the CI workflows.
+- **CI validation pending** — cu130 and cu130-nightly runs must be triggered and linked here before release readiness can be confirmed.
 
 ## Release Readiness Checklist
 - [ ] cu130 green

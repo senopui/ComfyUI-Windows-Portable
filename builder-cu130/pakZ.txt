@@ -1,2 +1,2 @@
-# Numpy 1.26.4 is already pinned in pak4.txt (line 27) with explanation
-# No need to duplicate the pinning here
+# NumPy pinning is handled in pak7.txt with Python-version markers.
+# Use NumPy 1.26.4 for <3.13 and NumPy 2.x for >=3.13.

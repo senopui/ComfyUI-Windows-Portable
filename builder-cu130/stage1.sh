@@ -156,7 +156,7 @@ echo "=== Installing transformers ==="
 $pip_exe install transformers
 
 echo "=== Installing pak4.txt ==="
-$pip_exe install -r "$workdir"/pak4.txt
+$pip_exe install --only-binary=numpy -r "$workdir"/pak4.txt
 
 echo "=== Installing pak5.txt ==="
 $pip_exe install -r "$workdir"/pak5.txt
@@ -199,7 +199,13 @@ echo "=== Attempting cupy-cuda13x (fallback to cuda12x if unavailable) ==="
 $pip_exe install cupy-cuda13x || $pip_exe install cupy-cuda12x || echo "WARNING: cupy install failed for both cuda13x and cuda12x"
 
 echo "=== Installing pak7.txt ==="
-$pip_exe install -r "$workdir"/pak7.txt
+$pip_exe install --only-binary=numpy -r "$workdir"/pak7.txt
+
+echo "=== NumPy sanity check (post pak7) ==="
+if ! "$workdir"/python_standalone/python.exe -c "import numpy as np; print(np.__version__)"; then
+    echo "ERROR: NumPy import failed after pak7 install; aborting"
+    exit 1
+fi
 
 install_with_retries() {
     local label="$1"
