@@ -7,6 +7,12 @@ pip_exe="${workdir}/python_standalone/python.exe -s -m pip"
 
 export PYTHONPYCACHEPREFIX="${workdir}/pycache1"
 export PIP_NO_WARN_SCRIPT_LOCATION=0
+export GIT_TERMINAL_PROMPT=0
+export PIP_NO_INPUT=1
+
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+fi
 
 ls -lahF
 
@@ -194,6 +200,57 @@ $pip_exe install cupy-cuda13x || $pip_exe install cupy-cuda12x || echo "WARNING:
 
 echo "=== Installing pak7.txt ==="
 $pip_exe install -r "$workdir"/pak7.txt
+
+install_with_retries() {
+    local label="$1"
+    shift
+    local attempts=3
+    local delay=5
+    local attempt
+    for attempt in $(seq 1 "$attempts"); do
+        echo "=== ${label} (attempt ${attempt}/${attempts}) ==="
+        if "$@"; then
+            return 0
+        fi
+        echo "WARNING: ${label} attempt ${attempt} failed"
+        sleep "$delay"
+    done
+    return 1
+}
+
+optional_vcs_status="skipped"
+optional_vcs_error=""
+if [[ -s "$workdir"/pak7_optional_vcs.txt ]]; then
+    optional_vcs_status="failed"
+    if install_with_retries "Installing pak7_optional_vcs.txt (optional VCS deps)" \
+        $pip_exe install -r "$workdir"/pak7_optional_vcs.txt; then
+        optional_vcs_status="success"
+    else
+        optional_vcs_error="pip install failed; optional dependencies skipped"
+        echo "WARNING: Optional cozy-comfy VCS installs failed; continuing"
+    fi
+else
+    optional_vcs_error="pak7_optional_vcs.txt missing or empty"
+    echo "WARNING: pak7_optional_vcs.txt missing or empty; skipping optional cozy-comfy installs"
+fi
+
+optional_vcs_success=false
+if [[ "$optional_vcs_status" == "success" ]]; then
+    optional_vcs_success=true
+fi
+
+cat > "$workdir"/vcs_optional_manifest.json <<EOF
+{
+  "source": "pak7_optional_vcs.txt",
+  "overall_status": "${optional_vcs_status}",
+  "success": ${optional_vcs_success},
+  "error": "${optional_vcs_error}",
+  "packages": [
+    { "name": "cozy-comfy", "optional": true },
+    { "name": "cozy-comfyui", "optional": true }
+  ]
+}
+EOF
 
 # temp-fix: Prevent SAM-3 from installing its older dependencies
 echo "=== Installing SAM3 (no-deps) ==="
