@@ -10,6 +10,7 @@ jobs:
   build_upload:
     env:
       PORTABLE_ROOT: ComfyUI_Windows_portable
+      PORTABLE_ARCHIVE_BASENAME: ComfyUI_Windows_portable_cu130_nightly
     permissions:
       contents: "write"
       packages: "write"
@@ -153,11 +154,14 @@ jobs:
               echo "- ComfyUI: $comfy_ver" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "### Archive Files" >> $GITHUB_STEP_SUMMARY
-              if ls *.7z* >/dev/null 2>&1 || ls *.zip* >/dev/null 2>&1; then
-                ls -lh *.7z* *.zip* 2>/dev/null | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY || echo "- Archive files created" >> $GITHUB_STEP_SUMMARY
+              shopt -s nullglob
+              archives=( "${PORTABLE_ARCHIVE_BASENAME}.7z"* "${PORTABLE_ARCHIVE_BASENAME}.zip"* "models.zip"* )
+              if [ ${#archives[@]} -gt 0 ]; then
+                ls -lh "${archives[@]}" 2>/dev/null | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY || echo "- Archive files created" >> $GITHUB_STEP_SUMMARY
               else
                 echo "- No archive files found" >> $GITHUB_STEP_SUMMARY
               fi
+              shopt -u nullglob
             else
               echo "❌ Build failed - portable directory not found" >> $GITHUB_STEP_SUMMARY
             fi
@@ -169,7 +173,7 @@ jobs:
             # You don't need to configure it
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           with:
-            file: "builder-cu130/*.7z*;builder-cu130/*.zip*"
+            file: "builder-cu130/${{ env.PORTABLE_ARCHIVE_BASENAME }}.7z*;builder-cu130/${{ env.PORTABLE_ARCHIVE_BASENAME }}.zip*;builder-cu130/models.zip*"
             # Always draft before release
             draft: true
             overwrite: true

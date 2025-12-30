@@ -9,15 +9,26 @@ du -hd1 ComfyUI_Windows_portable/ComfyUI/custom_nodes
 
 du -h ComfyUI_Windows_portable/ComfyUI/models
 
+archive_basename="${PORTABLE_ARCHIVE_BASENAME:-ComfyUI_Windows_portable_cu130_nightly}"
+if [ -z "$archive_basename" ]; then
+  echo "ERROR: PORTABLE_ARCHIVE_BASENAME is empty."
+  exit 1
+fi
+
 # Separate models and the rest
 mkdir -p m_folder/ComfyUI_Windows_portable/ComfyUI
 mv "ComfyUI_Windows_portable/ComfyUI/models"  "m_folder/ComfyUI_Windows_portable/ComfyUI/models"
 git -C "ComfyUI_Windows_portable/ComfyUI" checkout "models"
 
-"C:\Program Files\7-Zip\7z.exe" a -t7z -m0=lzma2 -mx=5 -mfb=32 -md=16m -ms=on -mf=BCJ2 -v2140000000b ComfyUI_Windows_portable_cu130_nightly.7z ComfyUI_Windows_portable
+"C:\Program Files\7-Zip\7z.exe" a -t7z -m0=lzma2 -mx=5 -mfb=32 -md=16m -ms=on -mf=BCJ2 -v2140000000b "${archive_basename}.7z" ComfyUI_Windows_portable
+
+if ! ls "${archive_basename}.7z"* >/dev/null 2>&1; then
+  echo "ERROR: Expected archive ${archive_basename}.7z* not found after compression."
+  exit 1
+fi
 
 # In case you need faster compression, comment the line above, and uncomment the line below.
-# "C:\Program Files\7-Zip\7z.exe" a -tzip -v2140000000b ComfyUI_Windows_portable_cu130_nightly.zip ComfyUI_Windows_portable
+# "C:\Program Files\7-Zip\7z.exe" a -tzip -v2140000000b "${archive_basename}.zip" ComfyUI_Windows_portable
 
 cd m_folder
 "C:\Program Files\7-Zip\7z.exe" a -tzip -v2140000000b models.zip ComfyUI_Windows_portable
