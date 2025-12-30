@@ -6,7 +6,7 @@
 
 ## Executive Summary
 - Overall status: **PASS WITH GATING**
-- Local/static verification completed (YAML parsing, shell syntax, Python compileall). CI and artifact verification could not be performed because this checkout has no `origin` remote or GitHub metadata configured, so cu130/cu130-nightly runtime status is **not confirmed** here.
+- Local/static verification completed (YAML parsing, shell syntax, Python compileall). Checkout logs were reviewed from attached CI log exports. CI and artifact verification could not be performed because this checkout has no `origin` remote or GitHub metadata configured, so cu130/cu130-nightly runtime status is **not confirmed** here.
 
 ## Test Matrix
 | Check | Evidence | Status |
@@ -20,7 +20,7 @@
 | CI: cu130-nightly workflow run (URL, status) | NOT RUN — same limitation as above. | NOT RUN |
 | Artifact verification (downloaded? contents verified?) | NOT RUN — no CI run artifacts accessible from this environment. | NOT RUN |
 | Regression signature scan (log search) | NOT RUN — no CI logs available to search. | NOT RUN |
-| Checkout logs review | NOT RUN — no checkout logs found in this workspace; CI checkout logs are only available in GitHub Actions. | NOT RUN |
+| Checkout logs review | Reviewed attached log exports (`logs_53235644142.zip`, `logs_53235648285.zip`): actions/checkout@v6 ran with `fetch-depth: 1`, `fetch-tags: false`, `clean: true`, and checked out `ffc88d4f7c9ccb00a317c87701ca81f900717670` without errors. | PASS |
 
 ## Key Findings
 ### Fixed items
@@ -36,11 +36,6 @@
   - **Where observed:** local repo has no `origin` remote; GitHub Actions runs cannot be queried here.
   - **Likely cause:** checkout does not include remote metadata or credentials.
   - **Recommended fix PR (future):** Run `build-cu130.yml` and `build-cu130-nightly.yml` on main (or this QA branch) and update QA_REPORT with run URLs, artifacts, and regression signature scans.
-- **Severity: Medium** — Checkout logs unavailable locally.
-  - **Symptom:** No checkout logs are present to verify Actions checkout behavior.
-  - **Where observed:** workspace has no `*.log` files and no CI log exports.
-  - **Likely cause:** checkout logs only exist in GitHub Actions job output.
-  - **Recommended fix PR (future):** Pull Actions logs from recent runs and archive a sanitized checkout log excerpt in QA evidence.
 
 ## Release Readiness Checklist
 - [ ] cu130 green
@@ -96,4 +91,14 @@ Compiling 'scripts/qa_validate_workflow.py'...
 
 ```text
 $ find . -maxdepth 2 -name '*.log'
+```
+
+```text
+Attached log export excerpt (logs_53235648285.zip, build_upload/2_Run actions_checkout@v6.txt)
+2025-12-30T09:33:31.6495541Z   fetch-depth: 1
+2025-12-30T09:33:31.6496313Z   fetch-tags: false
+2025-12-30T09:33:31.6495182Z   clean: true
+2025-12-30T09:33:34.3214922Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +ffc88d4f7c9ccb00a317c87701ca81f900717670:refs/remotes/origin/main
+2025-12-30T09:33:34.9816387Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force -B main refs/remotes/origin/main
+2025-12-30T09:33:35.1261945Z ffc88d4f7c9ccb00a317c87701ca81f900717670
 ```
