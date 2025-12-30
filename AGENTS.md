@@ -26,7 +26,7 @@
   - `bash -n builder-cu130/stage1.sh`
   - `bash -n builder-cu130/stage2.sh`
   - `bash -n builder-cu130/stage3.sh`
-  - `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/build-cu130-nightly.yml'))"`
+  - `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/build-cu130-nightly.yml'))"` (requires PyYAML; if unavailable, note as not run)
 - CI evidence: link the GitHub Actions run and cite log sections for Stage 1/2/3, quick-test, and manifest upload.
 
 ## Review guidelines

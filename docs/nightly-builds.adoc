@@ -225,7 +225,7 @@ bash -n builder-cu130/stage2.sh
 bash -n builder-cu130/stage3.sh
 
 # Validate YAML
-python3 -c "import yaml; yaml.safe_load(open('.github/workflows/build-cu130-nightly.yml'))"
+python3 -c "import yaml; yaml.safe_load(open('.github/workflows/build-cu130-nightly.yml'))" # requires PyYAML; note as not run if unavailable
 ----
 
 == Future Development
