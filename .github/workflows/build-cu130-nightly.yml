@@ -32,8 +32,8 @@ jobs:
           shell: bash
           working-directory: builder-cu130
           env:
-            SKIP_CORE_ATTENTION: "1"
-            SKIP_SPARGEATTN: "1"
+            SKIP_CORE_ATTENTION: "0"
+            SKIP_SPARGEATTN: "0"
           run: bash stage1.sh
 
         - name: PowerShell parse preflight (attention installers)

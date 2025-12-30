@@ -456,7 +456,7 @@ try {
       $spargeErrors += "nvcc not found; set CUDA_HOME or install CUDA toolkit"
       Write-Warning "GATED: SpargeAttn source build skipped (nvcc not found)"
     } else {
-      $buildTools = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn build prerequisites" -Arguments @("install", "--upgrade", "ninja", "build", "setuptools", "wheel")
+      $buildTools = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn build prerequisites" -Arguments @("install", "--upgrade", "pip", "setuptools", "wheel", "ninja")
       if (-not $buildTools.Success) {
         $spargeErrors += $buildTools.Error
       } else {
@@ -473,16 +473,37 @@ try {
         } else {
           Push-Location $spargeRepo
           try {
-            $installOutput = & $python -s -m pip install -e . --no-deps --no-build-isolation 2>&1 | Out-String
-            if ($installOutput) {
-              Write-Host $installOutput.TrimEnd()
+            if (Test-Path "dist") {
+              Remove-Item -Path "dist" -Recurse -Force
+            }
+            $buildOutput = & $python -s -m pip wheel . -w dist --no-deps --no-build-isolation 2>&1 | Out-String
+            if ($buildOutput) {
+              Write-Host $buildOutput.TrimEnd()
             }
             if ($LASTEXITCODE -ne 0) {
-              $spargeErrors += "SpargeAttn source install failed"
+              $spargeErrors += "SpargeAttn wheel build failed"
             } else {
-              $spargeSource = "source"
-              $spargeSuccess = $true
-              $spargeErrors = @()
+              $wheel = Get-ChildItem -Path "dist" -Filter "*.whl" | Sort-Object LastWriteTime | Select-Object -Last 1
+              if (-not $wheel) {
+                $spargeErrors += "SpargeAttn wheel not found after build"
+              } else {
+                $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from source wheel" -Arguments @("install", "--no-deps", $wheel.FullName)
+                if ($installAttempt.Success) {
+                  $importOutput = & $python -c "import spas_sage_attn; print('spas_sage_attn OK')" 2>&1 | Out-String
+                  if ($importOutput) {
+                    Write-Host $importOutput.TrimEnd()
+                  }
+                  if ($LASTEXITCODE -ne 0) {
+                    $spargeErrors += "SpargeAttn import check failed after source wheel install"
+                  } else {
+                    $spargeSource = "source"
+                    $spargeSuccess = $true
+                    $spargeErrors = @()
+                  }
+                } else {
+                  $spargeErrors += $installAttempt.Error
+                }
+              }
             }
           } finally {
             Pop-Location
@@ -522,7 +543,6 @@ try {
     } else {
       $spargeErrors += "AI-windows-whl wheel unavailable"
     }
-  }
   }
 
   if ($spargeSuccess) {
