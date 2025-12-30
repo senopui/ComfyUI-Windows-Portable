@@ -45,10 +45,10 @@ if (-not (Test-Path $python)) {
 $torchVersionBefore = Get-TorchVersion -Python $python
 Write-Host "Torch before xformers attempt: $torchVersionBefore"
 
-Write-Host "=== Verifying torch CUDA availability ==="
-& $python -c "import torch; print(torch.__version__, torch.version.cuda); assert torch.cuda.is_available()"
+Write-Host "=== Verifying torch CUDA build ==="
+& $python -c "import sys, torch; print(torch.__version__, torch.version.cuda); sys.exit(0 if torch.version.cuda else 1)"
 if ($LASTEXITCODE -ne 0) {
-  Write-Warning "Torch CUDA availability check failed; skipping xformers attempt."
+  Write-Warning "Torch CUDA build metadata missing; skipping xformers attempt."
   Write-EnvValue -Name "XFORMERS_AVAILABLE" -Value "0"
   exit 0
 }
