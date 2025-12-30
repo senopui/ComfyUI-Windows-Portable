@@ -17,6 +17,8 @@ README/docs updates for install/run modes, stable vs nightly builds, launchers, 
 - Port configuration (default 8188)
 - Portable paths and directory structure
 - Performance wheel best-effort policy
+- Optional accelerator gating, manifests (`accel_manifest.json`), and runtime preflight behavior
+- Nightly-only workflow toggles (`SKIP_CORE_ATTENTION`, `SAGEATTENTION2PP_PACKAGE`)
 - Troubleshooting common issues
 - Build flavors: stable (conservative) vs nightly (Python 3.13, PyTorch 2.10+ nightly cu130)
 

@@ -22,3 +22,12 @@ applyTo: ".github/workflows/**"
   - capture logs
   - fail on `Traceback` detection
 - Do not add new third-party actions or caching without explicit justification; document patterns when possible.
+
+## Optional accelerator workflow conventions (cu130-nightly)
+- Use the existing gated install steps in `build-cu130-nightly.yml`:
+  - `scripts/install_core_attention.ps1` (writes manifest entries)
+  - `scripts/install_optional_accel.ps1` (best-effort, gated)
+  - `scripts/attempt_install_xformers.ps1` (best-effort, no source builds)
+- Missing wheels **must not** fail the workflow; log as `GATED` and continue.
+- Preserve `accel_manifest.json` upload for visibility.
+- Respect `SAGEATTENTION2PP_PACKAGE` (opt-in) and `SKIP_CORE_ATTENTION` (stage1 deferral) environment toggles.
