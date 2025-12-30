@@ -56,6 +56,7 @@ print("OK")
 
 function Resolve-AIWindowsWheelUrl {
   param(
+    [string]$Python,
     [string]$PackagePattern,
     [string]$IndexUrl
   )
@@ -63,7 +64,38 @@ function Resolve-AIWindowsWheelUrl {
   try {
     $page = Invoke-WebRequest -Uri $IndexUrl -UseBasicParsing
     $links = [regex]::Matches($page.Content, 'href="([^"]+\.whl)"') | ForEach-Object { $_.Groups[1].Value }
-    $matches = $links | Where-Object { $_ -match $PackagePattern } | Sort-Object
+    $matches = $links | Where-Object { $_ -match $PackagePattern }
+    if ($matches.Count -gt 0) {
+      $payload = ($matches | ConvertTo-Json -Compress)
+      $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($payload))
+      $script = @"
+import base64
+import json
+from packaging.tags import sys_tags
+from packaging.utils import parse_wheel_filename
+
+links = json.loads(base64.b64decode("$encoded"))
+tag_set = {str(tag) for tag in sys_tags()}
+compatible = []
+for link in links:
+    filename = link.rsplit("/", 1)[-1]
+    try:
+        _, _, _, wheel_tags = parse_wheel_filename(filename)
+    except Exception:
+        continue
+    if any(str(tag) in tag_set for tag in wheel_tags):
+        compatible.append(link)
+
+print("\n".join(compatible))
+"@
+      $filtered = & $Python -c $script 2>$null
+      if ($LASTEXITCODE -eq 0 -and $filtered) {
+        $matches = $filtered -split "`r?`n"
+      } elseif ($LASTEXITCODE -ne 0) {
+        Write-Warning "Failed to filter AI-windows-whl wheels by tag; falling back to unfiltered list."
+      }
+    }
+    $matches = $matches | Sort-Object
     if ($matches.Count -gt 0) {
       $candidate = $matches[-1]
       if ($candidate -match '^https?://') {
@@ -143,7 +175,7 @@ foreach ($package in $packages) {
   }
 
   if (-not $success) {
-    $aiUrl = Resolve-AIWindowsWheelUrl -PackagePattern $package.AiPattern -IndexUrl "https://ai-windows-whl.github.io/whl/"
+    $aiUrl = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern $package.AiPattern -IndexUrl "https://ai-windows-whl.github.io/whl/"
     if ($aiUrl) {
       $installAttempt = Invoke-PipInstall -Python $python -Label "Installing $($package.Name) from AI-windows-whl" -Arguments @("install", "--no-deps", $aiUrl)
       if ($installAttempt.Success) {
