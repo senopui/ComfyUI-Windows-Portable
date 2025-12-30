@@ -173,7 +173,7 @@ jobs:
             # You don't need to configure it
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           with:
-            file: "builder-cu130/${PORTABLE_ARCHIVE_BASENAME}.7z*;builder-cu130/${PORTABLE_ARCHIVE_BASENAME}.zip*;builder-cu130/models.zip*"
+            file: "builder-cu130/${{ env.PORTABLE_ARCHIVE_BASENAME }}.7z*;builder-cu130/${{ env.PORTABLE_ARCHIVE_BASENAME }}.zip*;builder-cu130/models.zip*"
             # Always draft before release
             draft: true
             overwrite: true
