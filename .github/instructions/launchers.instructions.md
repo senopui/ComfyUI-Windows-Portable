@@ -4,6 +4,16 @@ applyTo: "**/*.bat"
 
 # Launcher batch files (batch launchers)
 
+## Workflow norms
+- /plan first for build-system work.
+- Provide verification evidence (commands + outputs + CI run links).
+- Avoid parallel edits on the same files.
+
+## Sharp edges
+- `cu130` is stable; `cu130-nightly` is experimental. Never regress stable intent.
+- Optional accelerators are best-effort; never hard-fail CI. Gate + warn + manifest.
+- Never allow pip to downgrade torch or pull CPU torch; fail fast or skip/gate.
+
 ## Where to look first
 - Existing launcher patterns in `builder-cu130/attachments/ExtraScripts/*.bat`
 - Main launchers: `run_nvidia_gpu.bat`, `run_cpu.bat`, and specialized variants

@@ -4,7 +4,7 @@
 
 == Overview
 
-The nightly build workflow provides bleeding-edge versions of ComfyUI with the latest Python, PyTorch, CUDA, and optimization libraries. These builds are intended for users who want to test the latest features and optimizations before they make it into stable releases.
+The nightly build workflow provides bleeding-edge versions of ComfyUI with the latest Python, PyTorch, CUDA, and optimization libraries. These builds are intended for users who want to test the latest features and optimizations before they make it into stable releases. `cu130` remains the stable track; `cu130-nightly` is experimental and must never regress stable intent.
 
 == What's Included
 
@@ -42,6 +42,7 @@ The nightly build workflow includes comprehensive validation:
    * Installs PyTorch nightly from CUDA 13.0 channel
    * Installs bleeding-edge packages from AI-windows-whl
    * Installs standard dependencies from pak files
+   * Fails fast if pip attempts to downgrade torch or pull CPU-only builds
    * Attempts optional VCS dependencies (`https://github.com/cozy-comfyui/cozy_comfy` and `https://github.com/cozy-comfyui/cozy_comfyui`) in best-effort mode and records results in `builder-cu130/vcs_optional_manifest.json`
 
 2. **Stage 2: Assembling Repositories**
@@ -77,7 +78,7 @@ Logs are captured and analyzed for:
 * Successful initialization
 * Custom node loading
 
-If any traceback is detected, the build fails and logs are displayed.
+If any traceback is detected, the build fails and logs are displayed. Evidence lives in GitHub Actions run logs under the Stage 1/2/Validation/Stage 3 steps and the uploaded manifest artifacts.
 
 === Optional Accelerator Policy
 
@@ -87,7 +88,7 @@ Optional accelerators are installed on a best-effort basis and **must not** fail
 
 === Stability Level
 
-⚠️  **Experimental** - Nightly builds are less stable than tagged releases.
+⚠️  **Experimental** - Nightly builds are less stable than tagged releases. Stable `cu130` remains the baseline for reliability.
 
 Expected issues:
 * Occasional package conflicts

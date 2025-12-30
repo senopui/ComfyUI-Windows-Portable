@@ -4,6 +4,20 @@ applyTo: ".github/workflows/**"
 
 # GitHub Actions workflows (.github/workflows/**)
 
+## Workflow norms
+- /plan first for build-system work.
+- Provide verification evidence (commands + outputs + CI run links).
+- Avoid parallel edits on the same files.
+
+## Sharp edges
+- `cu130` is stable; `cu130-nightly` is experimental. Never regress stable intent.
+- Optional accelerators are best-effort; never hard-fail CI. Gate + warn + manifest.
+- Never allow pip to downgrade torch or pull CPU torch; fail fast or skip/gate.
+
+## PowerShell robustness
+- Capture stdout/stderr (`2>&1 | Out-String`) and log it.
+- Validate JSON before writing manifests; fail fast on invalid JSON.
+
 ## Where to look first
 - Existing workflow files in `.github/workflows/` for patterns already in use
 - Match conventions present in build-cu128.yml, build-cu130.yml, build-cu130-nightly.yml
