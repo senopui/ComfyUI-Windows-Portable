@@ -7,8 +7,6 @@ decord
 facexlib
 fvcore
 gguf
-git+https://github.com/cozy-comfyui/cozy-comfy@main#egg=cozy-comfy
-git+https://github.com/cozy-comfyui/cozy-comfyui@main#egg=cozy-comfyui
 gpytoolbox
 hydra-core
 insightface

@@ -42,6 +42,7 @@ The nightly build workflow includes comprehensive validation:
    * Installs PyTorch nightly from CUDA 13.0 channel
    * Installs bleeding-edge packages from AI-windows-whl
    * Installs standard dependencies from pak files
+   * Attempts optional VCS dependencies (cozy-comfy/cozy-comfyui) in best-effort mode and records results in `builder-cu130/vcs_optional_manifest.json`
 
 2. **Stage 2: Assembling Repositories**
    * Clones ComfyUI from master branch
