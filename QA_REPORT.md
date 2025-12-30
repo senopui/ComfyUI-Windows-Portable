@@ -32,6 +32,11 @@
 ### Fixed items
 - Guarded NumPy selection for Python 3.13 to prevent NumPy 1.x sdist installs, and added a NumPy import sanity check to fail fast if wheels are missing or broken.
 
+### 2025-12-30 Attention stack install stability update
+- What failed: the core attention install step crashed because PowerShell output handling dropped/blocked pip output, causing the step to exit unexpectedly.
+- What changed: PowerShell now captures pip output safely, FlashAttention wheel resolution is explicit (PyPI binary-only → AI-windows-whl fallback) with gated failures, and Cozy VCS URLs were corrected.
+- How to verify: trigger the cu130-nightly workflow run, then run the local smoke test `pwsh -File scripts/qa_smoketest_windows.ps1`.
+
 ### Gated/optional items
 - Optional accelerator and VCS installs remain best-effort and are not allowed to fail the build.
 

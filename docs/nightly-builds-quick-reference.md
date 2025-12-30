@@ -63,6 +63,7 @@ Look for files named: `ComfyUI_Windows_portable_cu130_nightly.7z.*`
 Automated via GitHub Actions:
 1. **Stage 1:** Install Python 3.13 + PyTorch nightly + bleeding-edge packages
 2. **Core attention stack:** `install_core_attention.ps1` (nightly only; gated)
+   - FlashAttention resolves PyPI binary-only first, then AI-windows-whl fallback; missing wheels are gated.
 3. **Optional accelerators:** `install_optional_accel.ps1` (nightly only; gated, writes manifest)
 4. **xformers attempt:** `attempt_install_xformers.ps1` (nightly only; gated)
 5. **Stage 2:** Clone ComfyUI master + custom nodes + run CPU test + accelerator preflight
@@ -78,6 +79,8 @@ Warning: Failed to install [package] (may be incompatible with Python 3.13 / PyT
 ```
 
 This is expected. The build continues with available packages.
+
+PowerShell installer steps capture pip output defensively to avoid stream handling failures while still logging errors.
 
 ## Environment Toggles (Nightly)
 - `SKIP_CORE_ATTENTION=1` (used by workflow to defer core attention installs to PowerShell step)

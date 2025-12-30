@@ -29,5 +29,7 @@ applyTo: ".github/workflows/**"
   - `scripts/install_optional_accel.ps1` (best-effort, gated)
   - `scripts/attempt_install_xformers.ps1` (best-effort, no source builds)
 - Missing wheels **must not** fail the workflow; log as `GATED` and continue.
+- PowerShell installer steps must capture pip output safely (e.g., `2>&1 | Out-String`) to avoid pipeline/output crashes.
+- FlashAttention installs should resolve from PyPI binary-only first, then fall back to AI-windows-whl; keep gated when wheels are unavailable.
 - Preserve `accel_manifest.json` upload for visibility.
 - Respect `SAGEATTENTION2PP_PACKAGE` (opt-in) and `SKIP_CORE_ATTENTION` (stage1 deferral) environment toggles.
