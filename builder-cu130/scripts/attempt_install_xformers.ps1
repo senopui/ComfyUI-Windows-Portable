@@ -215,7 +215,7 @@ $manifestEntry = [pscustomobject]@{
 $existingResults = @()
 if (Test-Path $manifestPath) {
   try {
-    $existingResults = Get-Content $manifestPath | ConvertFrom-Json
+    $existingResults = Get-Content -Raw $manifestPath | ConvertFrom-Json
   } catch {
     Write-Warning "Failed to read existing manifest at $manifestPath; overwriting."
   }
