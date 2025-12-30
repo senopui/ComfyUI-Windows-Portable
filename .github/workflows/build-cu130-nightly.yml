@@ -27,7 +27,32 @@ jobs:
         - name: Stage 1 Gathering Dependencies
           shell: bash
           working-directory: builder-cu130
+          env:
+            SKIP_CORE_ATTENTION: "1"
           run: bash stage1.sh
+
+        - name: Install core attention stack (manifested)
+          shell: pwsh
+          working-directory: builder-cu130
+          run: ./scripts/install_core_attention.ps1
+
+        - name: Core attention manifest summary
+          shell: pwsh
+          working-directory: builder-cu130
+          run: |
+            $manifest = "accel_manifest.json"
+            if (-not (Test-Path $manifest)) {
+              throw "Missing $manifest"
+            }
+            $data = Get-Content $manifest | ConvertFrom-Json
+            Write-Host "=== Core attention install summary ==="
+            $data | Select-Object name, version, source, success | Format-Table -AutoSize
+
+        - name: Upload core attention manifest
+          uses: actions/upload-artifact@v4
+          with:
+            name: accel-manifest
+            path: builder-cu130/accel_manifest.json
 
         - name: Attempt xformers install (best effort)
           shell: pwsh
