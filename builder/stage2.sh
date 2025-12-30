@@ -83,6 +83,7 @@ $gcs https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git
 $gcs https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved.git
 $gcs https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git
 $gcs https://github.com/melMass/comfy_mtb.git
+$gcs https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git
 
 # More
 $gcs https://github.com/akatz-ai/ComfyUI-DepthCrafter-Nodes.git
@@ -134,7 +135,8 @@ cd "$workdir"/ComfyUI_Windows_portable
 #rm -rf "$workdir"/ComfyUI_Windows_portable/python_standalone/Lib/site-packages/pymatting
 rm -vf "$workdir"/ComfyUI_Windows_portable/*.log
 rm -vf "$workdir"/ComfyUI_Windows_portable/ComfyUI/user/*.log
-rm -vrf "$workdir"/ComfyUI_Windows_portable/ComfyUI/user/default/ComfyUI-Manager
+# Keep Manager's cache (ComfyRegistry)
+#rm -vrf "$workdir"/ComfyUI_Windows_portable/ComfyUI/user/__manager
 
 cd "$workdir"/ComfyUI_Windows_portable/ComfyUI/custom_nodes
 rm -vf ./ComfyUI-Custom-Scripts/pysssss.json
