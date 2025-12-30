@@ -14,13 +14,17 @@ ls -lahF
 python_url_default="https://github.com/astral-sh/python-build-standalone/releases/download/20251217/cpython-3.13.11%2B20251217-x86_64-pc-windows-msvc-install_only.tar.gz"
 python_sha_default="1fc6f07e075da66babb806802db8c86eecf1e9d29cbcb7f00227a87947b3735a"
 python_url="${PYTHON_STANDALONE_URL:-$python_url_default}"
-echo "=== Downloading Python 3.13 standalone build ==="
-echo "Source: $python_url"
-curl -sSL "$python_url" -o python.tar.gz
 expected_sha="${PYTHON_STANDALONE_SHA256:-}"
+if [[ -z "$expected_sha" && "$python_url" != "$python_url_default" ]]; then
+    echo "WARNING: Dynamic Python URL selected without SHA256; falling back to pinned URL."
+    python_url="$python_url_default"
+fi
 if [[ -z "$expected_sha" && "$python_url" == "$python_url_default" ]]; then
     expected_sha="$python_sha_default"
 fi
+echo "=== Downloading Python 3.13 standalone build ==="
+echo "Source: $python_url"
+curl -sSL "$python_url" -o python.tar.gz
 if [[ -n "$expected_sha" ]]; then
     echo "Verifying Python archive SHA256..."
     actual_sha=$(sha256sum python.tar.gz | awk '{print $1}')

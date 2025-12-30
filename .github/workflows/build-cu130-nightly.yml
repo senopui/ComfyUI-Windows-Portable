@@ -21,8 +21,11 @@ jobs:
         - name: Resolve latest Python 3.13 standalone build
           shell: pwsh
           run: |
-            $pinnedUrl = "https://github.com/astral-sh/python-build-standalone/releases/download/20251205/cpython-3.13.11%2B20251205-x86_64-pc-windows-msvc-install_only.tar.gz"
-            ./builder-cu130/scripts/resolve_python.ps1 -PinnedUrl $pinnedUrl
+            $pinnedUrl = "https://github.com/astral-sh/python-build-standalone/releases/download/20251217/cpython-3.13.11%2B20251217-x86_64-pc-windows-msvc-install_only.tar.gz"
+            $pinnedSha = "1fc6f07e075da66babb806802db8c86eecf1e9d29cbcb7f00227a87947b3735a"
+            ./builder-cu130/scripts/resolve_python.ps1 -PinnedUrl $pinnedUrl -PinnedSha256 $pinnedSha
+            Write-Host "Resolved Python URL: $env:PYTHON_STANDALONE_URL"
+            Write-Host "Resolved Python SHA256: $env:PYTHON_STANDALONE_SHA256"
 
         - name: Stage 1 Gathering Dependencies
           shell: bash
