@@ -89,8 +89,21 @@ function Try-PipInstall {
   return $false
 }
 
+function Get-PackageVersion {
+  param(
+    [string]$Python,
+    [string]$PackageName
+  )
+  $version = & $Python -c "import importlib.metadata as m; print(m.version('$PackageName'))" 2>$null
+  if ($LASTEXITCODE -ne 0) {
+    return $null
+  }
+  return $version.Trim()
+}
+
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $python = Join-Path $root "python_standalone/python.exe"
+$manifestPath = Join-Path $root "accel_manifest.json"
 
 if (-not (Test-Path $python)) {
   throw "Python executable not found at $python"
@@ -108,7 +121,15 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $installed = $false
+$source = "none"
+$errors = @()
+$version = $null
 $installed = Try-PipInstall -Python $python -Label "Attempting xformers from PyPI (no deps)" -Arguments @("install", "--no-deps", "xformers")
+if ($installed) {
+  $source = "pypi"
+} else {
+  $errors += "pip install xformers (pypi) failed"
+}
 
 if (-not $installed) {
   $aiWheelUrl = $env:XFORMERS_AI_WHL_URL
@@ -138,8 +159,14 @@ if (-not $installed) {
 
   if ($aiWheelUrl) {
     $installed = Try-PipInstall -Python $python -Label "Attempting xformers from AI-windows-whl (no deps)" -Arguments @("install", "--no-deps", $aiWheelUrl)
+    if ($installed) {
+      $source = "ai-windows-whl"
+    } else {
+      $errors += "pip install xformers (ai-windows-whl) failed"
+    }
   } else {
     Write-Warning "AI-windows-whl wheel URL unavailable; skipping fallback."
+    $errors += "AI-windows-whl wheel unavailable"
   }
 }
 
@@ -167,10 +194,46 @@ $torchVersionAfter = Get-TorchVersion -Python $python
 if ($installed) {
   & $python -c "import xformers; print(f'xformers {xformers.__version__} installed')"
   if ($LASTEXITCODE -eq 0 -and $torchVersionAfter -eq $torchVersionBefore) {
+    $version = Get-PackageVersion -Python $python -PackageName "xformers"
     Write-EnvValue -Name "XFORMERS_AVAILABLE" -Value "1"
     Write-Host "xformers installed successfully."
-    exit 0
+    $installed = $true
+  } else {
+    $errors += "xformers import failed or torch drifted"
+    $installed = $false
   }
+}
+
+$manifestEntry = [pscustomobject]@{
+  name = "xformers"
+  version = $version
+  source = $source
+  success = $installed
+  error_if_any = if ($errors.Count -gt 0) { $errors -join " | " } else { $null }
+}
+
+$existingResults = @()
+if (Test-Path $manifestPath) {
+  try {
+    $existingResults = Get-Content $manifestPath | ConvertFrom-Json
+  } catch {
+    Write-Warning "Failed to read existing manifest at $manifestPath; overwriting."
+  }
+}
+
+$combined = @()
+if ($existingResults) {
+  $combined += @($existingResults)
+}
+$combined += $manifestEntry
+
+$combined | ConvertTo-Json -Depth 4 | Out-File -FilePath $manifestPath -Encoding utf8
+Write-Host "Wrote xformers manifest entry to $manifestPath"
+
+if ($installed) {
+  Write-EnvValue -Name "XFORMERS_AVAILABLE" -Value "1"
+  Write-Host "xformers installed successfully."
+  exit 0
 }
 
 Write-EnvValue -Name "XFORMERS_AVAILABLE" -Value "0"
