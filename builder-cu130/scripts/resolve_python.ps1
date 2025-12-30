@@ -11,7 +11,7 @@ function Write-EnvValue {
     [string]$Name,
     [string]$Value
   )
-  $env:$Name = $Value
+  Set-Item -Path "env:$Name" -Value $Value
   if ($env:GITHUB_ENV) {
     "{0}={1}" -f $Name, $Value | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
   }
