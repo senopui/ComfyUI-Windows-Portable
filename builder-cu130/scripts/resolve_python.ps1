@@ -41,7 +41,7 @@ function Get-Sha256FromSums {
   try {
     $shaResponse = Invoke-WebRequest -Uri $ShaUrl -Headers $Headers -Method Get
   } catch {
-    Write-Warning "Failed to fetch SHA256SUMS from $ShaUrl: $($_.Exception.Message)"
+    Write-Warning "Failed to fetch SHA256SUMS from ${ShaUrl}: $($_.Exception.Message)"
     return ""
   }
   $content = $shaResponse.Content
