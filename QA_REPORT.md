@@ -82,3 +82,10 @@ Expected dependency versions for each builder configuration:
 - GPU inference not exercised in CI (Windows runners lack CUDA); manual GPU validation still required.
 - Artifact validation only checks presence of key files, not full runtime.
 - QA scripts not yet executed here; run post-build on Windows with assembled portable tree to confirm runtime.
+
+## Runtime Startup Log Triage
+**Source log**: Not found in repository or attachments. Re-run with logging enabled to generate `<portable>/logs/qa-smoketest.log` via `pwsh ./scripts/qa_smoketest_windows.ps1`.
+
+| Exception Signature | Module/Component | Optional/Required | Evidence | PR / Fix |
+| --- | --- | --- | --- | --- |
+| _No startup log available_ | _N/A_ | _N/A_ | `<portable>/logs/qa-smoketest.log` missing | _TBD after log capture; add gating or dependency fixes as needed_ |
