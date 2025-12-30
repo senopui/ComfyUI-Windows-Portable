@@ -210,6 +210,14 @@ $pip_exe install -r "$workdir"/pakY.txt
 echo "=== Installing pakZ.txt ==="
 $pip_exe install -r "$workdir"/pakZ.txt
 
+if [[ "${NIGHTLY_BUILD:-}" == "1" ]]; then
+    echo "=== Installing optional accelerators (nightly best effort) ==="
+    PIP_EXE="$pip_exe" \
+    PYTHON_EXE="$workdir/python_standalone/python.exe" \
+    PORTABLE_ROOT="${PORTABLE_ROOT:-}" \
+        bash "$workdir"/install_optional_accelerators.sh
+fi
+
 # Log Python/PyTorch/CUDA versions
 echo "=============================="
 echo "=== Final Version Summary ==="

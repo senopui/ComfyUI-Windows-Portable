@@ -124,6 +124,11 @@ $gcs https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git || echo "WARNIN
 echo "=== Copying attachments ==="
 cp -rf "$workdir"/attachments/. \
     "$workdir"/ComfyUI_Windows_portable/
+# Include optional accelerators report in portable root when available
+if [[ "${NIGHTLY_BUILD:-}" == "1" && -f "$workdir/accelerators_report.txt" ]]; then
+    cp -f "$workdir/accelerators_report.txt" \
+        "$workdir"/ComfyUI_Windows_portable/accelerators_report.txt
+fi
 # Ensure legacy launchers are available at portable root
 cp -f "$workdir"/ComfyUI_Windows_portable/ExtraScripts/run_nvidia_gpu.bat \
     "$workdir"/ComfyUI_Windows_portable/run_nvidia_gpu.bat
