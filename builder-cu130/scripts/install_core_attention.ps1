@@ -273,6 +273,17 @@ foreach ($package in $packages) {
 
   Invoke-TorchGuard -Python $python -Root $root -Label "$($package.Name) install"
 
+  if ($success) {
+    $postGuardImport = Test-PackageImport -Python $python -ImportNames $package.ImportNames
+    if (-not $postGuardImport.Success) {
+      $success = $false
+      $version = $null
+      $errors += "Post-guard import check failed: $($postGuardImport.Error)"
+    } else {
+      $version = Get-PackageVersion -Python $python -PackageName $package.Name
+    }
+  }
+
   $errorMessage = if ($errors.Count -gt 0) { ($errors -join " | ") } else { $null }
 
   $results += [pscustomobject]@{
