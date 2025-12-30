@@ -139,6 +139,15 @@ cp "$workdir"/ComfyUI_Windows_portable/ExtraScripts/run_nvidia_gpu.bat \
 cp "$workdir"/ComfyUI_Windows_portable/ExtraScripts/run_cpu.bat \
     "$workdir"/ComfyUI_Windows_portable/run_cpu.bat
 
+if [ -f "$workdir/accel_manifest.json" ]; then
+    echo "=== Copying accelerator manifest to runtime marker ==="
+    mkdir -p "$workdir"/ComfyUI_Windows_portable/ComfyUI/user/default
+    cp "$workdir"/accel_manifest.json \
+        "$workdir"/ComfyUI_Windows_portable/ComfyUI/user/default/accel_manifest.json
+else
+    echo "WARNING: accel_manifest.json not found; skipping runtime marker copy"
+fi
+
 du -hd2 "$workdir"/ComfyUI_Windows_portable
 
 ################################################################################

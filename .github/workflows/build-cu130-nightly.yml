@@ -36,7 +36,12 @@ jobs:
           working-directory: builder-cu130
           run: ./scripts/install_core_attention.ps1
 
-        - name: Core attention manifest summary
+        - name: Install optional accelerators (best effort)
+          shell: pwsh
+          working-directory: builder-cu130
+          run: ./scripts/install_optional_accel.ps1
+
+        - name: Accelerator manifest summary
           shell: pwsh
           working-directory: builder-cu130
           run: |
@@ -45,10 +50,10 @@ jobs:
               throw "Missing $manifest"
             }
             $data = Get-Content $manifest | ConvertFrom-Json
-            Write-Host "=== Core attention install summary ==="
+            Write-Host "=== Accelerator install summary ==="
             $data | Select-Object name, version, source, success | Format-Table -AutoSize
 
-        - name: Upload core attention manifest
+        - name: Upload accelerator manifest
           uses: actions/upload-artifact@v4
           with:
             name: accel-manifest
