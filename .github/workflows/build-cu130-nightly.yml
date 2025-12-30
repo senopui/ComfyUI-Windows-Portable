@@ -40,6 +40,14 @@ jobs:
           working-directory: builder-cu130
           run: ./scripts/install_core_attention.ps1
 
+        - name: Nightly core attention diagnostics
+          shell: pwsh
+          working-directory: builder-cu130
+          run: |
+            python --version
+            python -c "import torch; print(torch.__version__, torch.version.cuda)"
+            python -c "try: import flash_attn; print('flash_attn import: OK')\nexcept Exception as exc: print(f'WARNING: flash_attn import failed: {exc.__class__.__name__}: {exc}')"
+
         - name: Install optional accelerators (best effort)
           shell: pwsh
           working-directory: builder-cu130
