@@ -39,9 +39,9 @@ jobs:
             foreach ($script in $scripts) {
               try {
                 [scriptblock]::Create((Get-Content -Raw $script)) | Out-Null
-                Write-Host "Parse OK: $script"
+                Write-Host ("Parse OK: {0}" -f $script)
               } catch {
-                Write-Error "PowerShell parse failed for $script: $($_.Exception.Message)"
+                Write-Error ("PowerShell parse failed for {0}: {1}" -f $script, $_.Exception.Message)
                 exit 1
               }
             }
