@@ -82,6 +82,7 @@ $gcs https://github.com/twri/sdxl_prompt_styler.git
 $gcs https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git
 $gcs https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved.git
 $gcs https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git
+$gcs https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git
 $gcs https://github.com/melMass/comfy_mtb.git
 
 # More

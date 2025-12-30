@@ -24,6 +24,7 @@ https://github.com/Amorano/Jovimetrix/raw/refs/heads/main/requirements.txt
 https://github.com/neverbiasu/ComfyUI-SAM2/raw/refs/heads/main/requirements.txt
 https://github.com/akatz-ai/ComfyUI-AKatz-Nodes/raw/refs/heads/main/requirements.txt
 https://github.com/Ltamann/ComfyUI-TBG-SAM3/raw/refs/heads/main/requirements.txt
+https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler/raw/refs/heads/main/requirements.txt
 )
 
 for line in "${array[@]}";
@@ -33,6 +34,7 @@ done
 sed -i '/^#/d' pak7.txt
 sed -i 's/[[:space:]]*$//' pak7.txt
 sed -i 's/>=.*$//' pak7.txt
+sed -i 's/[[:space:]]*$//' pak7.txt
 sed -i 's/_/-/g' pak7.txt
 sed -i 's/; platform-system=="Windows"//' pak7.txt
 
