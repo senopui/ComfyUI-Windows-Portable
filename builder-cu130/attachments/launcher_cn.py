@@ -10,6 +10,11 @@ from gooey import Gooey, GooeyParser
 # 配置文件路径
 CONFIG_FILE = "launcher_config.json"
 
+def run_preflight():
+    preflight_path = os.path.join(os.getcwd(), "scripts", "preflight_accel.py")
+    if os.path.exists(preflight_path):
+        subprocess.run([sys.executable, "-s", "-B", preflight_path])
+
 def save_config(args):
     """保存用户配置到文件"""
     config = {
@@ -193,6 +198,8 @@ def main():
     # 配置 ComfyUI-Manager 使用国内镜像（仅限列表，无法影响下载）
     create_channels_list()
     create_config_ini()
+
+    run_preflight()
 
     # 构建启动命令
     command = [

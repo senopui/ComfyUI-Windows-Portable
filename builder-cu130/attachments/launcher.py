@@ -10,6 +10,11 @@ from gooey import Gooey, GooeyParser
 # Configuration file path
 CONFIG_FILE = "launcher_config.json"
 
+def run_preflight():
+    preflight_path = os.path.join(os.getcwd(), "scripts", "preflight_accel.py")
+    if os.path.exists(preflight_path):
+        subprocess.run([sys.executable, "-s", "-B", preflight_path])
+
 def save_config(args):
     """Save user configuration to a file"""
     config = {
@@ -154,6 +159,8 @@ def main():
     # Configure PATH environment variable
     os.environ['PATH'] += os.pathsep + os.path.join(os.getcwd(), 'MinGit', 'cmd')
     os.environ['PATH'] += os.pathsep + os.path.join(os.getcwd(), 'python_standalone', 'Scripts')
+
+    run_preflight()
 
     # Construct the launch command
     command = [

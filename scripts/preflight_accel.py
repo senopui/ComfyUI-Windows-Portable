@@ -27,6 +27,10 @@ IMPORT_CHECKS = [
         "imports": ["sageattention", "sageattention2"],
     },
     {
+        "name": "sageattention2pp",
+        "imports": ["sageattention2pp"],
+    },
+    {
         "name": "natten",
         "imports": ["natten"],
     },

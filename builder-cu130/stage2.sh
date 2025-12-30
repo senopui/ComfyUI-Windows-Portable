@@ -188,6 +188,12 @@ cd "$workdir"/ComfyUI_Windows_portable/ComfyUI/custom_nodes/ComfyUI-Impact-Subpa
 "$workdir"/ComfyUI_Windows_portable/python_standalone/python.exe -s -B install.py || echo "WARNING: Impact-Subpack install.py failed"
 
 ################################################################################
+# Accelerator preflight (disable dependent nodes when backends are missing)
+echo "=== Running accelerator preflight ==="
+"$workdir"/ComfyUI_Windows_portable/python_standalone/python.exe -s -B \
+    "$workdir"/ComfyUI_Windows_portable/scripts/preflight_accel.py
+
+################################################################################
 # Run the test (CPU only), also let custom nodes download some models
 echo "=== Running quick test with --quick-test-for-ci --cpu ==="
 cd "$workdir"/ComfyUI_Windows_portable

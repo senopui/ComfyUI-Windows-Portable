@@ -177,6 +177,7 @@ if (-not (Test-Path $python)) {
 $packages = @(
   [pscustomobject]@{
     Name = "flash-attn"
+    VersionName = "flash-attn"
     ImportNames = @("flash_attn")
     SourceSpec = "flash-attn"
     AiPattern = "flash[_-]attn"
@@ -185,7 +186,18 @@ $packages = @(
     SourceReason = "Source build not feasible on Windows runner."
   },
   [pscustomobject]@{
+    Name = "flash_attn_3"
+    VersionName = "flash-attn-3"
+    ImportNames = @("flash_attn_3")
+    SourceSpec = "flash-attn-3"
+    AiPattern = "flash[_-]attn[_-]?3"
+    Required = $false
+    AllowSourceBuild = $false
+    SourceReason = "flash_attn_3 wheel unavailable for this build."
+  },
+  [pscustomobject]@{
     Name = "sageattention"
+    VersionName = "sageattention"
     ImportNames = @("sageattention")
     SourceSpec = "sageattention"
     AiPattern = "sageattention"
@@ -195,6 +207,7 @@ $packages = @(
   },
   [pscustomobject]@{
     Name = "sageattention2"
+    VersionName = "sageattention2"
     ImportNames = @("sageattention2", "sageattention")
     SourceSpec = "sageattention2"
     AiPattern = "sageattention2"
@@ -204,6 +217,7 @@ $packages = @(
   },
   [pscustomobject]@{
     Name = "triton-windows"
+    VersionName = "triton-windows"
     ImportNames = @("triton")
     SourceSpec = "triton-windows<3.6"
     AiPattern = "triton[_-]windows"
@@ -214,6 +228,30 @@ $packages = @(
 )
 
 $results = @()
+
+$sageattention2ppSpec = $env:SAGEATTENTION2PP_PACKAGE
+if ($sageattention2ppSpec) {
+  $sageattention2ppVersionName = ($sageattention2ppSpec -split "[<>=! ]")[0]
+  $packages += [pscustomobject]@{
+    Name = "sageattention2pp"
+    VersionName = $sageattention2ppVersionName
+    ImportNames = @("sageattention2pp", "sageattention2", "sageattention")
+    SourceSpec = $sageattention2ppSpec
+    AiPattern = "sageattention2pp"
+    Required = $false
+    AllowSourceBuild = $false
+    SourceReason = "SageAttention2++ wheel unavailable for this build."
+  }
+} else {
+  $results += [pscustomobject]@{
+    name = "sageattention2pp"
+    version = $null
+    source = "unsupported"
+    success = $false
+    error_if_any = "unsupported (SAGEATTENTION2PP_PACKAGE not set)"
+  }
+  Write-Warning "GATED: sageattention2pp unsupported (SAGEATTENTION2PP_PACKAGE not set)"
+}
 
 foreach ($package in $packages) {
   $success = $false
@@ -267,7 +305,7 @@ foreach ($package in $packages) {
       $success = $false
       $errors += $importAttempt.Error
     } else {
-      $version = Get-PackageVersion -Python $python -PackageName $package.Name
+      $version = Get-PackageVersion -Python $python -PackageName $package.VersionName
     }
   }
 
@@ -280,7 +318,7 @@ foreach ($package in $packages) {
       $version = $null
       $errors += "Post-guard import check failed: $($postGuardImport.Error)"
     } else {
-      $version = Get-PackageVersion -Python $python -PackageName $package.Name
+      $version = Get-PackageVersion -Python $python -PackageName $package.VersionName
     }
   }
 
