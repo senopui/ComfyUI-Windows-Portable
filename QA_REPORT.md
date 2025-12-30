@@ -46,8 +46,8 @@ Root cause: cp1252 encoding on Windows runners could not emit the checkmark (✓
 Expected dependency versions for each builder configuration:
 
 ### builder-cu130 (CUDA 13.0 Nightly)
-- **Python**: 3.12.x (embedded in `python_standalone/`)
-- **PyTorch**: 2.7.0.dev (nightly) with CUDA 13.0 support (`cu130` in version string)
+- **Python**: 3.13.x (embedded in `python_standalone/`)
+- **PyTorch**: 2.11.0.dev (nightly) with CUDA 13.0 support (`cu130` in version string)
 - **CUDA Toolkit**: 13.0
 - **Key Performance Libraries**:
   - xformers (nightly, post-cu130 PyTorch install)
