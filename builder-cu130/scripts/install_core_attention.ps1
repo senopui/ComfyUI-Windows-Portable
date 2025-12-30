@@ -7,11 +7,14 @@ function Invoke-PipInstall {
     [string[]]$Arguments
   )
   Write-Host "=== $Label ==="
-  & $Python -s -m pip @Arguments
-  if ($LASTEXITCODE -eq 0) {
-    return @{ Success = $true; Error = $null }
+  $output = (& $Python -s -m pip @Arguments 2>&1 | Out-String).TrimEnd()
+  $exitCode = $LASTEXITCODE
+  return @{
+    Success = ($exitCode -eq 0)
+    ExitCode = $exitCode
+    Output = $output
+    Version = $null
   }
-  return @{ Success = $false; Error = "pip exited with code $LASTEXITCODE" }
 }
 
 function Get-PackageVersion {
@@ -19,11 +22,11 @@ function Get-PackageVersion {
     [string]$Python,
     [string]$PackageName
   )
-  $version = & $Python -c "import importlib.metadata as m; print(m.version('$PackageName'))"
+  $version = (& $Python -c "import importlib.metadata as m; print(m.version('$PackageName'))" 2>&1 | Out-String).TrimEnd()
   if ($LASTEXITCODE -ne 0) {
     return $null
   }
-  return $version.Trim()
+  return $version
 }
 
 function Test-PackageImport {
@@ -47,11 +50,11 @@ if errors:
     sys.exit(1)
 print("OK")
 "@
-  $output = & $Python -c $script 2>&1
+  $output = (& $Python -c $script 2>&1 | Out-String).TrimEnd()
   if ($LASTEXITCODE -eq 0) {
     return @{ Success = $true; Error = $null }
   }
-  return @{ Success = $false; Error = $output.Trim() }
+  return @{ Success = $false; Error = $output }
 }
 
 function Test-TorchNightlyCu130 {
@@ -76,11 +79,15 @@ if "cu130" not in ver:
     sys.exit(1)
 print(ver)
 "@
-  $output = & $Python -c $script 2>&1
-  if ($LASTEXITCODE -eq 0) {
-    return @{ Success = $true; Version = $output.Trim() }
+  $output = (& $Python -c $script 2>&1 | Out-String).TrimEnd()
+  $exitCode = $LASTEXITCODE
+  $success = ($exitCode -eq 0)
+  return @{
+    Success = $success
+    ExitCode = $exitCode
+    Output = $output
+    Version = if ($success) { $output } else { $null }
   }
-  return @{ Success = $false; Version = $output.Trim() }
 }
 
 function Invoke-TorchGuard {
@@ -95,7 +102,8 @@ function Invoke-TorchGuard {
     Write-Host "Torch $($check.Version) verified"
     return
   }
-  Write-Warning "Torch check failed after $Label ($($check.Version)); restoring from pak3.txt"
+  $checkDetails = if ($check.Output) { $check.Output } else { "exit $($check.ExitCode)" }
+  Write-Warning "Torch check failed after $Label ($checkDetails); restoring from pak3.txt"
   $pak3 = Join-Path $Root "pak3.txt"
   & $Python -s -m pip install --force-reinstall --no-deps -r $pak3
   if ($LASTEXITCODE -ne 0) {
@@ -106,7 +114,8 @@ function Invoke-TorchGuard {
   if ($recheck.Success) {
     Write-Host "Torch $($recheck.Version) recovery verified"
   } else {
-    Write-Warning "Torch recovery verification failed ($($recheck.Version))"
+    $recheckDetails = if ($recheck.Output) { $recheck.Output } else { "exit $($recheck.ExitCode)" }
+    Write-Warning "Torch recovery verification failed ($recheckDetails)"
   }
 }
 
@@ -144,7 +153,7 @@ for link in links:
 
 print("\n".join(compatible))
 "@
-      $filtered = & $Python -c $script 2>$null
+      $filtered = (& $Python -c $script 2>&1 | Out-String).TrimEnd()
       if ($LASTEXITCODE -eq 0 -and $filtered) {
         $matches = $filtered -split "`r?`n"
       } elseif ($LASTEXITCODE -ne 0) {
@@ -265,7 +274,7 @@ foreach ($package in $packages) {
     $success = $true
     $errors = @()
   } else {
-    $errors += $installAttempt.Error
+    $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Output)"
   }
 
   if (-not $success) {
@@ -277,7 +286,7 @@ foreach ($package in $packages) {
         $success = $true
         $errors = @()
       } else {
-        $errors += $installAttempt.Error
+        $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Output)"
       }
     } else {
       $errors += "AI-windows-whl wheel unavailable"
@@ -292,7 +301,7 @@ foreach ($package in $packages) {
         $success = $true
         $errors = @()
       } else {
-        $errors += $installAttempt.Error
+        $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Output)"
       }
     } else {
       $errors += $package.SourceReason
