@@ -28,12 +28,30 @@ jobs:
             Write-Host "Resolved Python URL: $env:PYTHON_STANDALONE_URL"
             Write-Host "Resolved Python SHA256: $env:PYTHON_STANDALONE_SHA256"
 
+        - name: PowerShell parse preflight (attention installers)
+          shell: pwsh
+          working-directory: builder-cu130
+          run: |
+            $scripts = @(
+              "./scripts/install_core_attention.ps1",
+              "./scripts/install_optional_accel.ps1"
+            )
+            foreach ($script in $scripts) {
+              try {
+                [scriptblock]::Create((Get-Content -Raw $script)) | Out-Null
+                Write-Host "Parse OK: $script"
+              } catch {
+                Write-Error "PowerShell parse failed for $script: $($_.Exception.Message)"
+                exit 1
+              }
+            }
+
         - name: Stage 1 Gathering Dependencies
           shell: bash
           working-directory: builder-cu130
           env:
-            SKIP_CORE_ATTENTION: "1"
-            SKIP_SPARGEATTN: "1"
+            SKIP_CORE_ATTENTION: "0"
+            SKIP_SPARGEATTN: "0"
           run: bash stage1.sh
 
         - name: Install core attention stack (manifested)
