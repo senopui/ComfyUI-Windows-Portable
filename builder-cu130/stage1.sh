@@ -11,8 +11,8 @@ export PIP_NO_WARN_SCRIPT_LOCATION=0
 ls -lahF
 
 # Download Python 3.13 Standalone (workflow-resolved, fallback to pinned)
-python_url_default="https://github.com/astral-sh/python-build-standalone/releases/download/20251205/cpython-3.13.11%2B20251205-x86_64-pc-windows-msvc-install_only.tar.gz"
-python_sha_default="1a57991904d4182932c791ef1e60b78399892802654767b6b68d3c778ca758d9"
+python_url_default="https://github.com/astral-sh/python-build-standalone/releases/download/20251217/cpython-3.13.11%2B20251217-x86_64-pc-windows-msvc-install_only.tar.gz"
+python_sha_default="1fc6f07e075da66babb806802db8c86eecf1e9d29cbcb7f00227a87947b3735a"
 python_url="${PYTHON_STANDALONE_URL:-$python_url_default}"
 echo "=== Downloading Python 3.13 standalone build ==="
 echo "Source: $python_url"
@@ -62,21 +62,15 @@ echo "=== Verifying PyTorch installation ==="
 echo "=== Attempting flash-attn from AI-windows-whl ==="
 $pip_exe install flash-attn --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn binary wheel not available for cp313/torch-nightly, source build prevented (skipping)"
 
-# Guarded install: xformers via AI-windows-whl
-# Attempt binary-only xformers install (with its bundled dependencies), then check if torch was downgraded
-# Use --only-binary to avoid building from source (avoids mismatched torch/python versions)
-echo "=== Attempting xformers from AI-windows-whl ==="
-$pip_exe install xformers --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: xformers binary wheel not available for cp313/torch-nightly, source build prevented (skipping)"
-
-# Verify torch nightly is still installed after xformers (not downgraded)
-echo "=== Verifying PyTorch version after xformers install ==="
+# Verify torch nightly is still installed after optional wheels (not downgraded)
+echo "=== Verifying PyTorch version after optional wheels ==="
 if ! "$workdir"/python_standalone/python.exe - <<'PYVER'
 from packaging.version import Version, InvalidVersion
 import torch
 
 ver = getattr(torch, "__version__", None)
 if not ver or not isinstance(ver, str):
-    raise SystemExit("torch version is missing or invalid after xformers install")
+    raise SystemExit("torch version is missing or invalid after optional wheels install")
 base = ver.split('+', 1)[0]
 try:
     parsed = Version(base)
