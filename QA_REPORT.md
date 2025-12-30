@@ -20,6 +20,7 @@
 | CI: cu130-nightly workflow run (URL, status) | NOT RUN — same limitation as above. | NOT RUN |
 | Artifact verification (downloaded? contents verified?) | NOT RUN — no CI run artifacts accessible from this environment. | NOT RUN |
 | Regression signature scan (log search) | NOT RUN — no CI logs available to search. | NOT RUN |
+| Checkout logs review | NOT RUN — no checkout logs found in this workspace; CI checkout logs are only available in GitHub Actions. | NOT RUN |
 
 ## Key Findings
 ### Fixed items
@@ -35,6 +36,11 @@
   - **Where observed:** local repo has no `origin` remote; GitHub Actions runs cannot be queried here.
   - **Likely cause:** checkout does not include remote metadata or credentials.
   - **Recommended fix PR (future):** Run `build-cu130.yml` and `build-cu130-nightly.yml` on main (or this QA branch) and update QA_REPORT with run URLs, artifacts, and regression signature scans.
+- **Severity: Medium** — Checkout logs unavailable locally.
+  - **Symptom:** No checkout logs are present to verify Actions checkout behavior.
+  - **Where observed:** workspace has no `*.log` files and no CI log exports.
+  - **Likely cause:** checkout logs only exist in GitHub Actions job output.
+  - **Recommended fix PR (future):** Pull Actions logs from recent runs and archive a sanitized checkout log excerpt in QA evidence.
 
 ## Release Readiness Checklist
 - [ ] cu130 green
@@ -86,4 +92,8 @@ Listing 'builder'...
 ...
 Compiling 'scripts/preflight_accel.py'...
 Compiling 'scripts/qa_validate_workflow.py'...
+```
+
+```text
+$ find . -maxdepth 2 -name '*.log'
 ```
