@@ -84,8 +84,10 @@ Expected dependency versions for each builder configuration:
 - QA scripts not yet executed here; run post-build on Windows with assembled portable tree to confirm runtime.
 
 ## Runtime Startup Log Triage
-**Source log**: Not found in repository or attachments. Re-run with logging enabled to generate `<portable>/logs/qa-smoketest.log` via `pwsh ./scripts/qa_smoketest_windows.ps1`.
+**Source log**: `ComfyUI_Windows_portable-Running-Log.txt` (attached in PR comment on 2025-12-29). Re-run with logging enabled to generate `<portable>/logs/qa-smoketest.log` via `pwsh ./scripts/qa_smoketest_windows.ps1`.
 
 | Exception Signature | Module/Component | Optional/Required | Evidence | PR / Fix |
 | --- | --- | --- | --- | --- |
-| _No startup log available_ | _N/A_ | _N/A_ | `<portable>/logs/qa-smoketest.log` missing | _TBD after log capture; add gating or dependency fixes as needed_ |
+| `ImportError: DLL load failed while importing _C` (xformers → `flash_attn_3`) | xformers / flash-attn interoperability; diffusers import path | Required for diffusers-backed nodes | `diffusers.models.attention_processor` → `xformers.ops` → `flash_attn_3` import fails; cascades into `ComfyUI-DepthCrafter-Nodes`, `ComfyUI-layerdiffuse`, `ComfyUI-TeaCache`, `ComfyUI_smZNodes` | Ensure cu130-compatible xformers + flash-attn wheels for Python 3.13; confirm ABI match with torch 2.11 nightly. |
+| `ModuleNotFoundError: No module named 'nunchaku'` | ComfyUI-nunchaku | Required for nunchaku nodes | `ComfyUI-nunchaku` logs show version mismatch and missing package after startup | Add/update nunchaku wheel in cu130 pak files; ensure version ≥ 1.0.0 per node requirement. |
+| `RuntimeError: Failed to import spas_sage_attn` | ComfyUI-RadialAttn (SpargeAttn) | Required for radial attention nodes | `ComfyUI-RadialAttn` fails after missing `spas_sage_attn` / `sparse_sageattn` | Add SpargeAttn wheel from woct0rdho builds to cu130 dependency list. |
