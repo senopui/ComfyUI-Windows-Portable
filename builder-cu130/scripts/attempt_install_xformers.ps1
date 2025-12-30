@@ -20,6 +20,31 @@ function Get-TorchVersion {
   return $version.Trim()
 }
 
+function Get-TorchInfo {
+  param([string]$Python)
+  $script = @"
+import json
+import torch
+
+ver = getattr(torch, "__version__", "")
+cuda = torch.version.cuda or ""
+base = ver.split("+", 1)[0] if ver else ""
+cuda_tag = f"cu{cuda.replace('.', '')}" if cuda else ""
+print(json.dumps({
+    "version": ver,
+    "base": base,
+    "cuda": cuda,
+    "cuda_tag": cuda_tag
+}))
+"@
+  $payload = & $Python -c $script 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Unable to read torch metadata ($payload)"
+    return $null
+  }
+  return $payload.Trim() | ConvertFrom-Json
+}
+
 function Test-TorchNightlyCu130 {
   param([string]$Python)
   $script = @"
@@ -89,6 +114,84 @@ function Try-PipInstall {
   return $false
 }
 
+function Get-WheelLinks {
+  param(
+    [string]$IndexUrl,
+    [string]$Pattern
+  )
+  try {
+    $page = Invoke-WebRequest -Uri $IndexUrl -UseBasicParsing
+    $matches = [regex]::Matches($page.Content, 'href="([^"]+\.whl)"') | ForEach-Object { $_.Groups[1].Value }
+    if ($Pattern) {
+      $matches = $matches | Where-Object { $_ -match $Pattern }
+    }
+    $links = @()
+    foreach ($match in $matches) {
+      if ($match -match '^https?://') {
+        $links += $match
+      } else {
+        $links += "$IndexUrl$match"
+      }
+    }
+    return $links
+  } catch {
+    Write-Warning "Failed to query index $IndexUrl: $($_.Exception.Message)"
+    return @()
+  }
+}
+
+function Select-CompatibleWheels {
+  param(
+    [string]$Python,
+    [string[]]$WheelUrls,
+    [string]$TorchBaseVersion,
+    [string]$CudaTag
+  )
+  if (-not $WheelUrls -or $WheelUrls.Count -eq 0) {
+    return @()
+  }
+  $pattern = "(?i)(torch|pt|pytorch)?[-_.]?$([regex]::Escape($TorchBaseVersion))"
+  $filtered = $WheelUrls | Where-Object {
+    $name = [IO.Path]::GetFileName($_)
+    ($name -match "(?i)$CudaTag") -and ($name -match $pattern)
+  }
+  if (-not $filtered -or $filtered.Count -eq 0) {
+    return @()
+  }
+  $payload = ($filtered | ConvertTo-Json -Compress)
+  $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($payload))
+  $script = @"
+import base64
+import json
+from packaging.tags import sys_tags
+from packaging.utils import parse_wheel_filename
+
+links = json.loads(base64.b64decode("$encoded"))
+tag_set = {str(tag) for tag in sys_tags()}
+compatible = []
+for link in links:
+    filename = link.rsplit("/", 1)[-1]
+    try:
+        _, _, _, wheel_tags = parse_wheel_filename(filename)
+    except Exception:
+        continue
+    if any(str(tag) in tag_set for tag in wheel_tags):
+        compatible.append(link)
+
+print("\n".join(compatible))
+"@
+  $output = & $Python -c $script 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Failed to filter xformers wheels by tag: $output"
+    return @()
+  }
+  $lines = ($output | Out-String).TrimEnd()
+  if (-not $lines) {
+    return @()
+  }
+  return $lines -split "`r?`n"
+}
+
 function Get-PackageVersion {
   param(
     [string]$Python,
@@ -120,54 +223,92 @@ if ($LASTEXITCODE -ne 0) {
   exit 0
 }
 
+$torchInfo = Get-TorchInfo -Python $python
+if (-not $torchInfo) {
+  Write-Warning "Unable to read torch metadata; skipping xformers attempt."
+  Write-EnvValue -Name "XFORMERS_AVAILABLE" -Value "0"
+  exit 0
+}
+
+$torchBase = $torchInfo.base
+$cudaTag = $torchInfo.cuda_tag
+if (-not $torchBase -or -not $cudaTag -or $cudaTag -ne "cu130") {
+  Write-Warning "Torch version/cuda metadata unsupported for xformers (base=$torchBase cuda=$cudaTag); skipping."
+  Write-EnvValue -Name "XFORMERS_AVAILABLE" -Value "0"
+  exit 0
+}
+
 $installed = $false
 $source = "none"
 $errors = @()
 $version = $null
-$installed = Try-PipInstall -Python $python -Label "Attempting xformers from PyPI (no deps)" -Arguments @("install", "--no-deps", "xformers")
-if ($installed) {
-  $source = "pypi"
-} else {
-  $errors += "pip install xformers (pypi) failed"
+$candidateWheel = $null
+$aiWheelUrl = $env:XFORMERS_AI_WHL_URL
+if ($aiWheelUrl) {
+  Write-Host "Using AI-windows-whl wheel URL from environment: $aiWheelUrl"
+  $compat = Select-CompatibleWheels -Python $python -WheelUrls @($aiWheelUrl) -TorchBaseVersion $torchBase -CudaTag $cudaTag
+  if ($compat.Count -gt 0) {
+    $candidateWheel = $compat[0]
+    $source = "ai-windows-whl"
+  } else {
+    $errors += "AI-windows-whl wheel URL incompatible with torch $torchBase $cudaTag"
+  }
 }
 
-if (-not $installed) {
-  $aiWheelUrl = $env:XFORMERS_AI_WHL_URL
-  if (-not $aiWheelUrl) {
-    $indexUrl = "https://ai-windows-whl.github.io/whl/xformers/"
-    Write-Host "=== Resolving AI-windows-whl xformers wheel from $indexUrl ==="
-    try {
-      $page = Invoke-WebRequest -Uri $indexUrl -UseBasicParsing
-      $matches = [regex]::Matches($page.Content, 'href="([^"]+xformers[^\"]+\.whl)"')
-      if ($matches.Count -gt 0) {
-        $candidate = $matches[$matches.Count - 1].Groups[1].Value
-        if ($candidate -match '^https?://') {
-          $aiWheelUrl = $candidate
-        } else {
-          $aiWheelUrl = "$indexUrl$candidate"
-        }
-        Write-Host "Resolved AI-windows-whl wheel: $aiWheelUrl"
-      } else {
-        Write-Warning "No xformers wheel links found at $indexUrl"
-      }
-    } catch {
-      Write-Warning "Failed to query AI-windows-whl index: $($_.Exception.Message)"
-    }
-  } else {
-    Write-Host "Using AI-windows-whl wheel URL from environment: $aiWheelUrl"
+if (-not $candidateWheel) {
+  $aiIndexUrl = "https://ai-windows-whl.github.io/whl/xformers/"
+  Write-Host "=== Resolving AI-windows-whl xformers wheel from $aiIndexUrl ==="
+  $aiLinks = Get-WheelLinks -IndexUrl $aiIndexUrl -Pattern "xformers"
+  $aiCompat = Select-CompatibleWheels -Python $python -WheelUrls $aiLinks -TorchBaseVersion $torchBase -CudaTag $cudaTag
+  if ($aiCompat.Count -gt 0) {
+    $candidateWheel = ($aiCompat | Sort-Object)[-1]
+    $source = "ai-windows-whl"
   }
+}
 
-  if ($aiWheelUrl) {
-    $installed = Try-PipInstall -Python $python -Label "Attempting xformers from AI-windows-whl (no deps)" -Arguments @("install", "--no-deps", $aiWheelUrl)
-    if ($installed) {
-      $source = "ai-windows-whl"
-    } else {
-      $errors += "pip install xformers (ai-windows-whl) failed"
-    }
-  } else {
-    Write-Warning "AI-windows-whl wheel URL unavailable; skipping fallback."
-    $errors += "AI-windows-whl wheel unavailable"
+if (-not $candidateWheel) {
+  $pypiIndex = "https://pypi.org/simple/xformers/"
+  Write-Host "=== Resolving PyPI xformers wheels from $pypiIndex ==="
+  $pypiLinks = Get-WheelLinks -IndexUrl $pypiIndex -Pattern "xformers"
+  $pypiCompat = Select-CompatibleWheels -Python $python -WheelUrls $pypiLinks -TorchBaseVersion $torchBase -CudaTag $cudaTag
+  if ($pypiCompat.Count -gt 0) {
+    $candidateWheel = ($pypiCompat | Sort-Object)[-1]
+    $source = "pypi"
   }
+}
+
+if (-not $candidateWheel) {
+  $errors += "GATED: no compatible xformers wheel for torch $torchBase ($cudaTag)"
+  Write-Warning "GATED: no compatible xformers wheel for torch $torchBase ($cudaTag). Skipping install."
+  $manifestEntry = [pscustomobject]@{
+    name = "xformers"
+    version = $null
+    source = "gated"
+    success = $false
+    error_if_any = if ($errors.Count -gt 0) { $errors -join " | " } else { $null }
+  }
+  $existingResults = @()
+  if (Test-Path $manifestPath) {
+    try {
+      $existingResults = Get-Content -Raw $manifestPath | ConvertFrom-Json
+    } catch {
+      Write-Warning "Failed to read existing manifest at $manifestPath; overwriting."
+    }
+  }
+  $combined = @()
+  if ($existingResults) {
+    $combined += @($existingResults)
+  }
+  $combined += $manifestEntry
+  $combined | ConvertTo-Json -Depth 4 | Out-File -FilePath $manifestPath -Encoding utf8
+  Write-Host "Wrote xformers manifest entry to $manifestPath"
+  Write-EnvValue -Name "XFORMERS_AVAILABLE" -Value "0"
+  exit 0
+}
+
+$installed = Try-PipInstall -Python $python -Label "Attempting xformers from $source (no deps)" -Arguments @("install", "--no-deps", $candidateWheel)
+if (-not $installed) {
+  $errors += "pip install xformers ($source) failed"
 }
 
 Write-Host "=== Skipping xformers source build attempt (optional) ==="
