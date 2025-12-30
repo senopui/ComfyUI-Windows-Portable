@@ -24,8 +24,12 @@ Portable build maintenance, embedded Python, dependency wheels, and archive crea
 ### Performance Wheels
 - Source: `https://ai-windows-whl.github.io/whl/`
 - NATTEN: `https://whl.natten.org`
+- FlashAttention: resolve PyPI binary-only first, then fall back to AI-windows-whl JSON when available (gated if missing)
 - Guard missing wheels with warnings (best-effort policy)
 - Include: flash-attn, xformers, sageattention, triton-windows, natten, nunchaku, spargeattention, bitsandbytes
+
+### Optional VCS Dependencies
+- Cozy repos (best-effort): `https://github.com/cozy-comfyui/cozy_comfy` and `https://github.com/cozy-comfyui/cozy_comfyui`
 
 ## Packaging Process
 - Stage artifacts into `ComfyUI_Windows_portable_cu130*.7z` for nightly
