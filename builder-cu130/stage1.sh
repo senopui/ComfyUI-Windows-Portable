@@ -60,19 +60,10 @@ echo "=== Verifying PyTorch installation ==="
     exit 1
 }
 
-if [[ -n "${SKIP_CORE_ATTENTION:-}" ]]; then
-    echo "=== Skipping core attention installs in stage1 (managed separately) ==="
-else
-    # Guarded install: flash-attn via AI-windows-whl (binary-only, no source builds)
-    # flash-attn requires torch to be installed first (imports torch during build)
-    # Use --only-binary to prevent PEP517 source builds which fail without torch in isolation
-    echo "=== Attempting flash-attn from AI-windows-whl ==="
-    $pip_exe install flash-attn --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn binary wheel not available for cp313/torch-nightly, source build prevented (skipping)"
-fi
-
-# Verify torch nightly is still installed after optional wheels (not downgraded)
-echo "=== Verifying PyTorch version after optional wheels ==="
-if ! "$workdir"/python_standalone/python.exe - <<'PYVER'
+verify_torch_or_restore() {
+    local label="$1"
+    echo "=== Verifying PyTorch version after ${label} ==="
+    if ! "$workdir"/python_standalone/python.exe - <<'PYVER'
 from packaging.version import Version, InvalidVersion
 import torch
 
@@ -90,10 +81,10 @@ if "cu130" not in ver:
     raise SystemExit(f"torch build is not cu130: {ver}")
 print(f"PyTorch {ver} verified")
 PYVER
-then
-    echo "WARNING: PyTorch version check failed, reinstalling PyTorch nightly"
-    $pip_exe install --force-reinstall --no-deps -r "$workdir"/pak3.txt
-    "$workdir"/python_standalone/python.exe - <<'PYVER' || { echo "ERROR: PyTorch recovery reinstall verification failed"; exit 1; }
+    then
+        echo "WARNING: PyTorch version check failed, reinstalling PyTorch nightly"
+        $pip_exe install --force-reinstall --no-deps -r "$workdir"/pak3.txt
+        "$workdir"/python_standalone/python.exe - <<'PYVER' || { echo "ERROR: PyTorch recovery reinstall verification failed"; exit 1; }
 from packaging.version import Version, InvalidVersion
 import torch
 
@@ -111,33 +102,48 @@ if "cu130" not in ver:
     raise SystemExit(f"torch recovery reinstall not cu130: {ver}")
 print(f"PyTorch {ver} recovery verified")
 PYVER
+    fi
+}
+
+if [[ -n "${SKIP_CORE_ATTENTION:-}" ]]; then
+    echo "=== Skipping core attention installs in stage1 (managed separately) ==="
+else
+    # Guarded install: flash-attn via AI-windows-whl (binary-only, no source builds)
+    # flash-attn requires torch to be installed first (imports torch during build)
+    # Use --only-binary to prevent PEP517 source builds which fail without torch in isolation
+    echo "=== Attempting flash-attn from AI-windows-whl ==="
+    $pip_exe install flash-attn --no-deps --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn binary wheel not available for cp313/torch-nightly, source build prevented (skipping)"
 fi
+
+verify_torch_or_restore "core attention install group"
 
 if [[ -z "${SKIP_CORE_ATTENTION:-}" ]]; then
     # Guarded install: sageattention via AI-windows-whl
     echo "=== Attempting sageattention from AI-windows-whl ==="
-    $pip_exe install sageattention --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: sageattention binary wheel not available for this Python+PyTorch+CUDA combination"
+    $pip_exe install sageattention --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: sageattention binary wheel not available for this Python+PyTorch+CUDA combination"
 
     # Guarded install: triton-windows via AI-windows-whl
     echo "=== Attempting triton-windows from AI-windows-whl ==="
-    $pip_exe install 'triton-windows<3.6' --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: triton-windows binary wheel not available for this Python+PyTorch+CUDA combination"
+    $pip_exe install 'triton-windows<3.6' --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: triton-windows binary wheel not available for this Python+PyTorch+CUDA combination"
 fi
 
 # Guarded install: natten via whl.natten.org
 echo "=== Attempting natten from whl.natten.org ==="
-$pip_exe install natten -f https://whl.natten.org || echo "WARNING: natten binary wheel not available for this Python+PyTorch+CUDA combination"
+$pip_exe install natten --no-deps -f https://whl.natten.org || echo "WARNING: natten binary wheel not available for this Python+PyTorch+CUDA combination"
 
 # Guarded install: nunchaku via AI-windows-whl
 echo "=== Attempting nunchaku from AI-windows-whl ==="
-$pip_exe install nunchaku --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: nunchaku binary wheel not available for this Python+PyTorch+CUDA combination"
+$pip_exe install nunchaku --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: nunchaku binary wheel not available for this Python+PyTorch+CUDA combination"
 
 # Guarded install: spargeattention via AI-windows-whl
 echo "=== Attempting spargeattention from AI-windows-whl ==="
-$pip_exe install spargeattention --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: spargeattention binary wheel not available for this Python+PyTorch+CUDA combination"
+$pip_exe install spargeattention --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: spargeattention binary wheel not available for this Python+PyTorch+CUDA combination"
 
 # Guarded install: bitsandbytes
 echo "=== Attempting bitsandbytes ==="
-$pip_exe install bitsandbytes || echo "WARNING: bitsandbytes binary wheel not available for this Python+PyTorch+CUDA combination"
+$pip_exe install bitsandbytes --no-deps || echo "WARNING: bitsandbytes binary wheel not available for this Python+PyTorch+CUDA combination"
+
+verify_torch_or_restore "optional accelerator install group"
 
 # temp-fix, TODO: remove after version chaos resolved
 echo "=== Installing transformers ==="

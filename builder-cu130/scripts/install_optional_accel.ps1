@@ -83,6 +83,62 @@ sys.exit(1)
   return @{ Success = $false; Error = $output.Trim(); Import = $null }
 }
 
+function Test-TorchNightlyCu130 {
+  param(
+    [string]$Python
+  )
+  $script = @"
+from packaging.version import Version, InvalidVersion
+import sys, torch
+
+ver = getattr(torch, "__version__", None)
+if not ver or not isinstance(ver, str):
+    sys.exit(1)
+base = ver.split("+", 1)[0]
+try:
+    parsed = Version(base)
+except InvalidVersion:
+    sys.exit(1)
+if parsed < Version("2.10.0.dev0"):
+    sys.exit(1)
+if "cu130" not in ver:
+    sys.exit(1)
+print(ver)
+"@
+  $output = & $Python -c $script 2>&1
+  if ($LASTEXITCODE -eq 0) {
+    return @{ Success = $true; Version = $output.Trim() }
+  }
+  return @{ Success = $false; Version = $output.Trim() }
+}
+
+function Invoke-TorchGuard {
+  param(
+    [string]$Python,
+    [string]$Root,
+    [string]$Label
+  )
+  Write-Host "=== Verifying torch after $Label ==="
+  $check = Test-TorchNightlyCu130 -Python $Python
+  if ($check.Success) {
+    Write-Host "Torch $($check.Version) verified"
+    return
+  }
+  Write-Warning "Torch check failed after $Label ($($check.Version)); restoring from pak3.txt"
+  $pak3 = Join-Path $Root "pak3.txt"
+  & $Python -s -m pip install --force-reinstall --no-deps -r $pak3
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Failed to restore PyTorch from $pak3"
+    return
+  }
+  $recheck = Test-TorchNightlyCu130 -Python $Python
+  if ($recheck.Success) {
+    Write-Host "Torch $($recheck.Version) recovery verified"
+  } else {
+    Write-Warning "Torch recovery verification failed ($($recheck.Version))"
+  }
+}
+
 function Filter-CompatibleWheelUrls {
   param(
     [string]$Python,
@@ -298,6 +354,7 @@ try {
     Write-Warning "GATED: nunchaku not available ($nunchakuErrorMessage)"
   }
   Add-Result -Name "nunchaku" -Version $nunchakuVersion -Source $nunchakuSource -Success $nunchakuSuccess -ErrorMessage (if ($nunchakuErrors.Count -gt 0) { $nunchakuErrors -join " | " } else { $null })
+  Invoke-TorchGuard -Python $python -Root $root -Label "nunchaku install group"
 
   # SpargeAttn (spas_sage_attn / sparse_sageattn)
   $spargeErrors = @()
@@ -385,6 +442,7 @@ try {
     Write-Warning "GATED: SpargeAttn not available ($spargeErrorMessage)"
   }
   Add-Result -Name "spargeattn" -Version $spargeVersion -Source $spargeSource -Success $spargeSuccess -ErrorMessage (if ($spargeErrors.Count -gt 0) { $spargeErrors -join " | " } else { $null })
+  Invoke-TorchGuard -Python $python -Root $root -Label "spargeattn install group"
 
   # NATTEN
   $nattenErrors = @()
@@ -398,7 +456,7 @@ try {
   }
 
   if (-not $nattenSuccess) {
-    $installAttempt = Invoke-PipInstall -Python $python -Label "Installing natten from PyPI (binary-only)" -Arguments @("install", "--only-binary", ":all:", "natten")
+    $installAttempt = Invoke-PipInstall -Python $python -Label "Installing natten from PyPI (binary-only)" -Arguments @("install", "--no-deps", "--only-binary", ":all:", "natten")
     if ($installAttempt.Success) {
       $nattenSource = "pypi"
       $nattenSuccess = $true
@@ -454,6 +512,7 @@ try {
     Write-Warning "GATED: natten not available ($nattenErrorMessage)"
   }
   Add-Result -Name "natten" -Version $nattenVersion -Source $nattenSource -Success $nattenSuccess -ErrorMessage (if ($nattenErrors.Count -gt 0) { $nattenErrors -join " | " } else { $null })
+  Invoke-TorchGuard -Python $python -Root $root -Label "natten install group"
 
   # bitsandbytes
   $bnbErrors = @()
@@ -467,7 +526,7 @@ try {
   }
 
   if (-not $bnbSuccess) {
-    $installAttempt = Invoke-PipInstall -Python $python -Label "Installing bitsandbytes from PyPI (binary-only)" -Arguments @("install", "--only-binary", ":all:", "bitsandbytes")
+    $installAttempt = Invoke-PipInstall -Python $python -Label "Installing bitsandbytes from PyPI (binary-only)" -Arguments @("install", "--no-deps", "--only-binary", ":all:", "bitsandbytes")
     if ($installAttempt.Success) {
       $bnbSource = "pypi"
       $bnbSuccess = $true
@@ -523,6 +582,7 @@ try {
     Write-Warning "GATED: bitsandbytes not available ($bnbErrorMessage)"
   }
   Add-Result -Name "bitsandbytes" -Version $bnbVersion -Source $bnbSource -Success $bnbSuccess -ErrorMessage (if ($bnbErrors.Count -gt 0) { $bnbErrors -join " | " } else { $null })
+  Invoke-TorchGuard -Python $python -Root $root -Label "bitsandbytes install group"
 } catch {
   Write-Warning "Optional accelerator install encountered an unexpected error: $($_.Exception.Message)"
 }
