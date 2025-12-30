@@ -15,15 +15,17 @@ The nightly build workflow provides bleeding-edge versions of ComfyUI with the l
 * **CUDA 13.0** - Latest CUDA toolkit for improved GPU performance
 * **ComfyUI Master** - Latest code from the master branch (no version pinning)
 
-=== Advanced Optimization Libraries
+=== Advanced Optimization Libraries (Best-Effort)
 
-The nightly builds include cutting-edge performance optimization libraries from the AI-windows-whl repository:
+Nightly builds *attempt* to install cutting-edge optimization libraries from curated wheel sources. Availability depends on upstream wheels for Python 3.13 + CUDA 13.0, so these are best-effort and explicitly gated when missing.
 
-* **xformers** - Latest version with memory-efficient attention mechanisms
+* **xformers** - Best-effort install attempt (no source builds)
 * **FlashAttention** - Highly optimized attention implementation (when available)
 * **SageAttention** - Advanced attention mechanism with Triton optimizations
 * **triton-windows** - Windows-compatible Triton compiler for custom kernels
 * **NATTEN** - Neighborhood attention for improved quality in certain workloads
+* **Nunchaku** - Optional optimizer backend (when available)
+* **SpargeAttn** - Optional optimizer backend (when available)
 
 == Build Schedule
 
@@ -75,6 +77,10 @@ Logs are captured and analyzed for:
 * Custom node loading
 
 If any traceback is detected, the build fails and logs are displayed.
+
+=== Optional Accelerator Policy
+
+Optional accelerators are installed on a best-effort basis and **must not** fail the workflow when unavailable. Availability is recorded in `builder-cu130/accel_manifest.json` and copied into the portable tree at `ComfyUI/user/default/accel_manifest.json`. Launchers run `scripts/preflight_accel.py` to re-check availability and disable dependent custom nodes when required backends are missing.
 
 == Stability and Support
 
