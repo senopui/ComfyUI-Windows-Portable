@@ -56,11 +56,15 @@ echo "=== Verifying PyTorch installation ==="
     exit 1
 }
 
-# Guarded install: flash-attn via AI-windows-whl (binary-only, no source builds)
-# flash-attn requires torch to be installed first (imports torch during build)
-# Use --only-binary to prevent PEP517 source builds which fail without torch in isolation
-echo "=== Attempting flash-attn from AI-windows-whl ==="
-$pip_exe install flash-attn --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn binary wheel not available for cp313/torch-nightly, source build prevented (skipping)"
+if [[ -n "${SKIP_CORE_ATTENTION:-}" ]]; then
+    echo "=== Skipping core attention installs in stage1 (managed separately) ==="
+else
+    # Guarded install: flash-attn via AI-windows-whl (binary-only, no source builds)
+    # flash-attn requires torch to be installed first (imports torch during build)
+    # Use --only-binary to prevent PEP517 source builds which fail without torch in isolation
+    echo "=== Attempting flash-attn from AI-windows-whl ==="
+    $pip_exe install flash-attn --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn binary wheel not available for cp313/torch-nightly, source build prevented (skipping)"
+fi
 
 # Verify torch nightly is still installed after optional wheels (not downgraded)
 echo "=== Verifying PyTorch version after optional wheels ==="
@@ -105,13 +109,15 @@ print(f"PyTorch {ver} recovery verified")
 PYVER
 fi
 
-# Guarded install: sageattention via AI-windows-whl
-echo "=== Attempting sageattention from AI-windows-whl ==="
-$pip_exe install sageattention --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: sageattention binary wheel not available for this Python+PyTorch+CUDA combination"
+if [[ -z "${SKIP_CORE_ATTENTION:-}" ]]; then
+    # Guarded install: sageattention via AI-windows-whl
+    echo "=== Attempting sageattention from AI-windows-whl ==="
+    $pip_exe install sageattention --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: sageattention binary wheel not available for this Python+PyTorch+CUDA combination"
 
-# Guarded install: triton-windows via AI-windows-whl
-echo "=== Attempting triton-windows from AI-windows-whl ==="
-$pip_exe install 'triton-windows<3.6' --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: triton-windows binary wheel not available for this Python+PyTorch+CUDA combination"
+    # Guarded install: triton-windows via AI-windows-whl
+    echo "=== Attempting triton-windows from AI-windows-whl ==="
+    $pip_exe install 'triton-windows<3.6' --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: triton-windows binary wheel not available for this Python+PyTorch+CUDA combination"
+fi
 
 # Guarded install: natten via whl.natten.org
 echo "=== Attempting natten from whl.natten.org ==="
