@@ -29,6 +29,60 @@ function Get-PackageVersion {
   return $version
 }
 
+function Parse-JsonSafe {
+  param(
+    [Parameter(Mandatory = $true)]
+    $RawOutput,
+    [string]$Source
+  )
+
+  $rawString = if ($RawOutput -is [string]) {
+    $RawOutput
+  } else {
+    [string]::Join("`n", $RawOutput)
+  }
+  $trimmed = ($rawString -replace "^\uFEFF", "").Trim()
+  $preview = if ($trimmed.Length -gt 200) { $trimmed.Substring(0, 200) } else { $trimmed }
+
+  if (-not $trimmed) {
+    Write-Warning "JSON parse skipped for $Source: empty response."
+    return [pscustomobject]@{
+      ok = $false
+      reason = "empty response"
+      raw_preview = $preview
+      source = $Source
+    }
+  }
+
+  if (-not ($trimmed.StartsWith("{") -or $trimmed.StartsWith("["))) {
+    $reason = if ($trimmed.StartsWith("<")) { "HTML response detected" } else { "non-JSON output detected" }
+    Write-Warning "JSON parse skipped for $Source: $reason."
+    return [pscustomobject]@{
+      ok = $false
+      reason = $reason
+      raw_preview = $preview
+      source = $Source
+    }
+  }
+
+  try {
+    $parsed = $trimmed | ConvertFrom-Json
+    return [pscustomobject]@{
+      ok = $true
+      data = $parsed
+      source = $Source
+    }
+  } catch {
+    Write-Warning "JSON parse failed for $Source: $($_.Exception.Message)"
+    return [pscustomobject]@{
+      ok = $false
+      reason = "ConvertFrom-Json failed: $($_.Exception.Message)"
+      raw_preview = $preview
+      source = $Source
+    }
+  }
+}
+
 function Test-PackageImport {
   param(
     [string]$Python,
@@ -121,7 +175,12 @@ print(json.dumps(info))
   if ($LASTEXITCODE -ne 0 -or -not $raw) {
     return $null
   }
-  return $raw | ConvertFrom-Json
+  $parsed = Parse-JsonSafe -RawOutput $raw -Source "Get-TorchInfo (python metadata)"
+  if (-not $parsed.ok) {
+    Write-Warning "Torch metadata JSON invalid: $($parsed.reason)."
+    return $null
+  }
+  return $parsed.data
 }
 
 function Invoke-TorchGuard {
@@ -168,7 +227,13 @@ function Resolve-WildminderWheelUrl {
   }
   try {
     $page = Invoke-WebRequest -Uri $IndexJsonUrl -UseBasicParsing
-    $payload = $page.Content | ConvertFrom-Json
+    $payloadRaw = ($page.Content 2>&1 | Out-String).TrimEnd()
+    $parsed = Parse-JsonSafe -RawOutput $payloadRaw -Source "Resolve-WildminderWheelUrl $IndexJsonUrl"
+    if (-not $parsed.ok) {
+      Write-Warning "Wildminder index JSON invalid: $($parsed.reason)."
+      return $null
+    }
+    $payload = $parsed.data
     $packages = @($payload.packages | Where-Object { $_.id -match $PackagePattern -or $_.name -match $PackagePattern })
     if ($packages.Count -eq 0) {
       Write-Warning "No Wildminder package entries matched pattern '$PackagePattern'"
