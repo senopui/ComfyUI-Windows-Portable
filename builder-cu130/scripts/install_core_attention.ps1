@@ -90,6 +90,40 @@ print(ver)
   }
 }
 
+function Get-TorchInfo {
+  param(
+    [string]$Python
+  )
+  $script = @"
+import json
+import sys
+import torch
+from packaging.version import Version, InvalidVersion
+
+ver = getattr(torch, "__version__", None)
+if not ver or not isinstance(ver, str):
+    sys.exit(1)
+base = ver.split("+", 1)[0]
+try:
+    parsed = Version(base)
+except InvalidVersion:
+    sys.exit(1)
+info = {
+    "torch_version": base,
+    "torch_major": parsed.major,
+    "torch_minor": parsed.minor,
+    "torch_is_dev": bool(parsed.is_devrelease),
+    "python_version": f"{sys.version_info.major}.{sys.version_info.minor}"
+}
+print(json.dumps(info))
+"@
+  $raw = (& $Python -c $script 2>&1 | Out-String).TrimEnd()
+  if ($LASTEXITCODE -ne 0 -or -not $raw) {
+    return $null
+  }
+  return $raw | ConvertFrom-Json
+}
+
 function Invoke-TorchGuard {
   param(
     [string]$Python,
@@ -119,7 +153,84 @@ function Invoke-TorchGuard {
   }
 }
 
-function Resolve-AIWindowsWheelUrl {
+function Resolve-WildminderWheelUrl {
+  param(
+    [string]$Python,
+    [string]$PackagePattern,
+    [string]$IndexJsonUrl,
+    [pscustomobject]$TorchInfo,
+    [string]$PythonTag
+  )
+  Write-Host "=== Resolving AI-windows-whl wheel from $IndexJsonUrl (pattern: $PackagePattern) ==="
+  if (-not $TorchInfo) {
+    Write-Warning "Torch info unavailable; skipping Wildminder resolver."
+    return $null
+  }
+  try {
+    $page = Invoke-WebRequest -Uri $IndexJsonUrl -UseBasicParsing
+    $payload = $page.Content | ConvertFrom-Json
+    $packages = @($payload.packages | Where-Object { $_.id -match $PackagePattern -or $_.name -match $PackagePattern })
+    if ($packages.Count -eq 0) {
+      Write-Warning "No Wildminder package entries matched pattern '$PackagePattern'"
+      return $null
+    }
+
+    $pythonVersion = $TorchInfo.python_version
+    $torchMajor = $TorchInfo.torch_major
+    $torchMinor = $TorchInfo.torch_minor
+    $torchIsDev = [bool]$TorchInfo.torch_is_dev
+
+    $candidates = @()
+    foreach ($pkg in $packages) {
+      foreach ($wheel in @($pkg.wheels)) {
+        if (-not $wheel.url) {
+          continue
+        }
+        if ($wheel.python_version -ne $pythonVersion) {
+          continue
+        }
+        if ($wheel.url -notmatch "win_amd64") {
+          continue
+        }
+        if ($PythonTag -and ($wheel.url -notmatch $PythonTag)) {
+          continue
+        }
+        $cudaNorm = ($wheel.cuda_version -replace "\.", "")
+        if ($cudaNorm -ne "130") {
+          continue
+        }
+        $torchVersion = $wheel.torch_version
+        if (-not ($torchVersion -match "^$torchMajor\\.$torchMinor")) {
+          continue
+        }
+        if ($torchIsDev -and ($torchVersion -notmatch "dev")) {
+          continue
+        }
+        if (-not $torchIsDev -and ($torchVersion -match "dev")) {
+          continue
+        }
+        $candidates += [pscustomobject]@{
+          url = $wheel.url
+          package_version = $wheel.package_version
+          torch_version = $torchVersion
+        }
+      }
+    }
+
+    if ($candidates.Count -eq 0) {
+      Write-Warning "No Wildminder wheels matched python $pythonVersion, $PythonTag, cu130, torch $torchMajor.$torchMinor."
+      return $null
+    }
+
+    $sorted = $candidates | Sort-Object -Property @{Expression = { [version]$_.package_version }}, @{Expression = { $_.torch_version }}, @{Expression = { $_.url } }
+    return $sorted[-1].url
+  } catch {
+    Write-Warning "Failed to query Wildminder AI-windows-whl index: $($_.Exception.Message)"
+  }
+  return $null
+}
+
+function Resolve-AIWindowsWheelUrlFromIndex {
   param(
     [string]$Python,
     [string]$PackagePattern,
@@ -178,6 +289,22 @@ print("\n".join(compatible))
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $python = Join-Path $root "python_standalone/python.exe"
 $manifestPath = Join-Path $root "accel_manifest.json"
+$aiWindowsWhlJson = "https://raw.githubusercontent.com/wildminder/AI-windows-whl/main/wheels.json"
+$aiWindowsIndex = "https://ai-windows-whl.github.io/whl/"
+$torchInfo = Get-TorchInfo -Python $python
+$pythonTag = $null
+if ($torchInfo) {
+  $pythonTag = switch ($torchInfo.python_version) {
+    "3.13" { "cp313" }
+    "3.12" { "cp312" }
+    default { $null }
+  }
+  if (-not $pythonTag) {
+    Write-Warning "Unsupported python version $($torchInfo.python_version) for AI-windows-whl filtering."
+  }
+} else {
+  Write-Warning "Unable to read torch/python metadata for AI-windows-whl filtering."
+}
 
 if (-not (Test-Path $python)) {
   throw "Python executable not found at $python"
@@ -278,18 +405,34 @@ foreach ($package in $packages) {
   }
 
   if (-not $success) {
-    $aiUrl = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern $package.AiPattern -IndexUrl "https://ai-windows-whl.github.io/whl/"
-    if ($aiUrl) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing $($package.Name) from AI-windows-whl" -Arguments @("install", "--no-deps", $aiUrl)
+    $wildminderUrl = Resolve-WildminderWheelUrl -Python $python -PackagePattern $package.AiPattern -IndexJsonUrl $aiWindowsWhlJson -TorchInfo $torchInfo -PythonTag $pythonTag
+    if ($wildminderUrl) {
+      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing $($package.Name) from Wildminder AI-windows-whl" -Arguments @("install", "--no-deps", $wildminderUrl)
       if ($installAttempt.Success) {
-        $source = "ai-windows-whl"
+        $source = "wildminder-ai-windows-whl"
         $success = $true
         $errors = @()
       } else {
         $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Output)"
       }
     } else {
-      $errors += "AI-windows-whl wheel unavailable"
+      $errors += "Wildminder AI-windows-whl wheel unavailable"
+    }
+  }
+
+  if (-not $success) {
+    $aiUrl = Resolve-AIWindowsWheelUrlFromIndex -Python $python -PackagePattern $package.AiPattern -IndexUrl $aiWindowsIndex
+    if ($aiUrl) {
+      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing $($package.Name) from AI-windows-whl index" -Arguments @("install", "--no-deps", $aiUrl)
+      if ($installAttempt.Success) {
+        $source = "ai-windows-whl-index"
+        $success = $true
+        $errors = @()
+      } else {
+        $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Output)"
+      }
+    } else {
+      $errors += "AI-windows-whl index wheel unavailable"
     }
   }
 
@@ -338,11 +481,12 @@ foreach ($package in $packages) {
     version = $version
     source = $source
     success = $success
+    gated = (-not $success)
     error_if_any = $errorMessage
   }
 
   if (-not $success) {
-    Write-Warning "GATED: $($package.Name) not available ($errorMessage)"
+    Write-Warning "GATED: $($package.Name) not available ($errorMessage). Marked as gated in accel_manifest.json."
     if ($package.Required) {
       throw "$($package.Name) is required but failed to install"
     }
