@@ -43,6 +43,7 @@ Look for files named: `ComfyUI_Windows_portable_cu130_nightly.7z.*`
 - Missing wheels **must not fail** builds; they are gated with warnings.
 - Results are recorded in `builder-cu130/accel_manifest.json` and copied into the portable tree at `ComfyUI/user/default/accel_manifest.json`.
 - Launchers run `scripts/preflight_accel.py` to re-check availability and disable dependent custom nodes (e.g., `ComfyUI-nunchaku`, `ComfyUI-RadialAttn`) when required backends are missing.
+- Stage 2 packages the repo-root `scripts/` directory into the portable root to keep `preflight_accel.py` available; missing preflight scripts are logged and recorded in `accel_manifest.json`.
 
 ## When to Use
 

@@ -82,7 +82,7 @@ If any traceback is detected, the build fails and logs are displayed. Evidence l
 
 === Optional Accelerator Policy
 
-Optional accelerators are installed on a best-effort basis and **must not** fail the workflow when unavailable. Availability is recorded in `builder-cu130/accel_manifest.json` and copied into the portable tree at `ComfyUI/user/default/accel_manifest.json`. Launchers run `scripts/preflight_accel.py` to re-check availability and disable dependent custom nodes when required backends are missing.
+Optional accelerators are installed on a best-effort basis and **must not** fail the workflow when unavailable. Availability is recorded in `builder-cu130/accel_manifest.json` and copied into the portable tree at `ComfyUI/user/default/accel_manifest.json`. Launchers run `scripts/preflight_accel.py` to re-check availability and disable dependent custom nodes when required backends are missing. Stage 2 copies the repo-root `scripts/` directory into the portable root so the preflight entrypoint is always packaged; if it is missing, nightly builds warn and record the skip in `accel_manifest.json`.
 
 == Stability and Support
 
