@@ -135,7 +135,7 @@ function Get-WheelLinks {
     }
     return $links
   } catch {
-    Write-Warning "Failed to query index $IndexUrl: $($_.Exception.Message)"
+    Write-Warning ("Failed to query index {0}: {1}" -f $IndexUrl, $_.Exception.Message)
     return @()
   }
 }

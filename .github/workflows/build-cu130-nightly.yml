@@ -34,7 +34,8 @@ jobs:
           run: |
             $scripts = @(
               "./scripts/install_core_attention.ps1",
-              "./scripts/install_optional_accel.ps1"
+              "./scripts/install_optional_accel.ps1",
+              "./scripts/attempt_install_xformers.ps1"
             )
             foreach ($script in $scripts) {
               try {
@@ -63,24 +64,44 @@ jobs:
           shell: pwsh
           working-directory: builder-cu130
           run: |
-            $py = Resolve-Path ".\ComfyUI_Windows_portable\python_standalone\python.exe"
+            $py = Resolve-Path ".\python_standalone\python.exe"
+            if (-not (Test-Path $py)) {
+              throw "python_standalone not found at $py"
+            }
             & $py --version
             $diag = @'
             import sys
+
+            def warn_optional(name, exc):
+                print(f"WARNING: {name} import failed: {exc.__class__.__name__}: {exc}")
+
             try:
                 import torch
-                print(f"torch {torch.__version__} cuda {getattr(torch.version, 'cuda', None)}")
             except Exception as exc:
-                print(f"WARNING: torch import failed: {exc.__class__.__name__}: {exc}")
+                print(f"ERROR: torch import failed: {exc.__class__.__name__}: {exc}")
+                sys.exit(1)
+
+            print(f"torch {torch.__version__} cuda {getattr(torch.version, 'cuda', None)}")
 
             try:
                 import flash_attn
                 print("flash_attn import: OK")
             except Exception as exc:
-                print(f"WARNING: flash_attn import failed: {exc.__class__.__name__}: {exc}")
+                warn_optional("flash_attn", exc)
+
+            try:
+                import triton
+                print("triton import: OK")
+            except Exception as exc:
+                warn_optional("triton", exc)
+
+            try:
+                import sageattention
+                print("sageattention import: OK")
+            except Exception as exc:
+                warn_optional("sageattention", exc)
             '@
-            $diag = $diag -replace '(?m)^ {12}', ''
-            & $py -c $diag
+            $diag | & $py -
 
         - name: Install optional accelerators (best effort)
           shell: pwsh

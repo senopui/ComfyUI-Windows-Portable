@@ -99,7 +99,7 @@ function Test-PackageImport {
     [string]$Python,
     [string[]]$ImportNames
   )
-  $payload = ($ImportNames | ConvertTo-Json -Compress)
+  $payload = (ConvertTo-Json -Compress -InputObject @($ImportNames))
   $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($payload))
   $script = @"
 import base64, importlib, json, sys
@@ -184,8 +184,27 @@ info = {
 }
 print(json.dumps(info))
 "@
-  $raw = (& $Python -c $script 2>&1 | Out-String).TrimEnd()
+  $stderrPath = [System.IO.Path]::GetTempFileName()
+  $raw = ""
+  try {
+    $raw = (& $Python -W ignore -c $script 2> $stderrPath | Out-String).TrimEnd()
+  } finally {
+    if (Test-Path $stderrPath) {
+      $stderrRaw = Get-Content -Raw $stderrPath -ErrorAction SilentlyContinue
+      if ($null -eq $stderrRaw) {
+        $stderr = ""
+      } else {
+        $stderr = $stderrRaw.Trim()
+      }
+      Remove-Item -Path $stderrPath -Force
+    } else {
+      $stderr = ""
+    }
+  }
   if ($LASTEXITCODE -ne 0 -or -not $raw) {
+    if ($stderr) {
+      Write-Warning "Torch metadata probe failed: $stderr"
+    }
     return $null
   }
   $parsed = Parse-JsonSafe -RawOutput $raw -Source "Get-TorchInfo (python metadata)"
