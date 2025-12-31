@@ -15,11 +15,11 @@ function Write-EnvValue {
 
 function Get-TorchVersion {
   param([string]$Python)
-  $version = & $Python -c "import torch; print(torch.__version__)"
+  $version = (& $Python -c "import torch; print(torch.__version__)" | Out-String).TrimEnd()
   if ($LASTEXITCODE -ne 0) {
     throw "Unable to read torch version."
   }
-  return $version.Trim()
+  return $version
 }
 
 function Test-TorchNightlyCu130 {
@@ -42,7 +42,7 @@ if "cu130" not in ver:
     sys.exit(1)
 print(ver)
 "@
-  $output = & $Python -c $script 2>&1
+  $output = (& $Python -c $script 2>&1 | Out-String).TrimEnd()
   if ($LASTEXITCODE -eq 0) {
     return @{ Success = $true; Version = $output.Trim() }
   }
@@ -84,17 +84,20 @@ function Try-PipInstall {
   )
   Write-Host "=== $Label ==="
   $stderrPath = [System.IO.Path]::GetTempFileName()
+  $stdoutPath = [System.IO.Path]::GetTempFileName()
   $stdout = ""
   $stderr = ""
   try {
-    $stdout = (& $Python -s -m pip @Arguments 2> $stderrPath | Out-String).TrimEnd()
+    & $Python -s -m pip @Arguments 1> $stdoutPath 2> $stderrPath
   } finally {
+    $stdout = (Read-TextFileSafe -Path $stdoutPath).TrimEnd()
     if (Test-Path $stderrPath) {
-      $stderrRaw = Get-Content -Raw $stderrPath -ErrorAction SilentlyContinue
-      if ($null -ne $stderrRaw) {
-        $stderr = $stderrRaw.Trim()
-      }
+      $stderrRaw = Read-TextFileSafe -Path $stderrPath
+      $stderr = $stderrRaw.Trim()
       Remove-Item -Path $stderrPath -Force
+    }
+    if (Test-Path $stdoutPath) {
+      Remove-Item -Path $stdoutPath -Force
     }
   }
   if ($stdout) {
@@ -148,12 +151,12 @@ for link in links:
 
 print("\n".join(compatible))
 "@
-  $output = & $Python -c $script 2>&1
+  $output = (& $Python -c $script 2>&1 | Out-String).TrimEnd()
   if ($LASTEXITCODE -ne 0) {
     Write-Warning "Failed to filter xformers wheels by tag: $output"
     return @()
   }
-  $lines = ($output | Out-String).TrimEnd()
+  $lines = $output
   if (-not $lines) {
     return @()
   }
@@ -165,11 +168,11 @@ function Get-PackageVersion {
     [string]$Python,
     [string]$PackageName
   )
-  $version = & $Python -c "import importlib.metadata as m; print(m.version('$PackageName'))" 2>$null
+  $version = (& $Python -c "import importlib.metadata as m; print(m.version('$PackageName'))" 2>$null | Out-String).TrimEnd()
   if ($LASTEXITCODE -ne 0) {
     return $null
   }
-  return $version.Trim()
+  return $version
 }
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
@@ -349,6 +352,8 @@ $combined += $manifestEntry
 
 $combined | ConvertTo-Json -Depth 4 | Out-File -FilePath $manifestPath -Encoding utf8
 Write-Host "Wrote xformers manifest entry to $manifestPath"
+
+Write-AccelSummary -Title "Xformers attempt" -Results @($manifestEntry)
 
 if ($installed) {
   Write-EnvValue -Name "XFORMERS_AVAILABLE" -Value "1"
