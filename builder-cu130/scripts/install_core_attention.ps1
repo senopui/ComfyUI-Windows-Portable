@@ -170,7 +170,11 @@ if (-not (Test-Path $python)) {
   throw "Python executable not found at $python"
 }
 
-$aiWindowsWhlJson = "https://raw.githubusercontent.com/wildminder/AI-windows-whl/main/wheels.json"
+$aiWindowsWhlJson = if ($env:AI_WINDOWS_WHL_WHEELS_JSON_URL) {
+  $env:AI_WINDOWS_WHL_WHEELS_JSON_URL
+} else {
+  "https://raw.githubusercontent.com/wildminder/AI-windows-whl/main/wheels.json"
+}
 $torchInfo = Get-TorchInfoFromPython -Python $python
 $pythonTag = $null
 if ($torchInfo) {

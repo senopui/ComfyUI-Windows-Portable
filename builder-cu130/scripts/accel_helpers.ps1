@@ -116,7 +116,7 @@ function Read-JsonFileSafe {
 
   $parsed = Parse-JsonSafe -RawOutput $raw -Source $SourceLabel
   if (-not $parsed.ok) {
-    Write-Warning "Failed to parse $SourceLabel at $Path: $($parsed.reason)"
+    Write-Warning ("Failed to parse {0} at {1}: {2}" -f $SourceLabel, $Path, $parsed.reason)
     return @()
   }
   if ($parsed.data -is [System.Collections.IEnumerable] -and -not ($parsed.data -is [string])) {
@@ -308,7 +308,7 @@ function Resolve-AIWindowsWheelUrl {
     [string]$Python,
     [string]$PackagePattern,
     [string]$PackageVersionPattern,
-    [string]$IndexJsonUrl = "https://raw.githubusercontent.com/wildminder/AI-windows-whl/main/wheels.json",
+    [string]$IndexJsonUrl,
     [string]$CudaTag = "cu130",
     [string]$PythonTag,
     [string]$TorchMinimum = "2.10.0",
@@ -322,6 +322,14 @@ function Resolve-AIWindowsWheelUrl {
     $PackagePattern
   }
   Write-Host "=== Resolving AI-windows-whl wheel via wheels.json (pattern: $requested) ==="
+
+  if (-not $IndexJsonUrl) {
+    $IndexJsonUrl = if ($env:AI_WINDOWS_WHL_WHEELS_JSON_URL) {
+      $env:AI_WINDOWS_WHL_WHEELS_JSON_URL
+    } else {
+      "https://raw.githubusercontent.com/wildminder/AI-windows-whl/main/wheels.json"
+    }
+  }
 
   if (-not $TorchInfo) {
     $TorchInfo = Get-TorchInfoFromPython -Python $Python
