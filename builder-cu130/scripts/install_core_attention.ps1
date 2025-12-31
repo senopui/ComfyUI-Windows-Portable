@@ -99,7 +99,7 @@ function Test-PackageImport {
     [string]$Python,
     [string[]]$ImportNames
   )
-  $payload = ($ImportNames | ConvertTo-Json -Compress)
+  $payload = (ConvertTo-Json -Compress -InputObject @($ImportNames))
   $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($payload))
   $script = @"
 import base64, importlib, json, sys
@@ -190,7 +190,12 @@ print(json.dumps(info))
     $raw = (& $Python -W ignore -c $script 2> $stderrPath | Out-String).TrimEnd()
   } finally {
     if (Test-Path $stderrPath) {
-      $stderr = (Get-Content -Raw $stderrPath).Trim()
+      $stderrRaw = Get-Content -Raw $stderrPath -ErrorAction SilentlyContinue
+      if ($null -eq $stderrRaw) {
+        $stderr = ""
+      } else {
+        $stderr = $stderrRaw.Trim()
+      }
       Remove-Item -Path $stderrPath -Force
     } else {
       $stderr = ""
