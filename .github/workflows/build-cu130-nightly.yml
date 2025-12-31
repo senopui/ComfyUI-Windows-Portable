@@ -70,37 +70,37 @@ jobs:
             }
             & $py --version
             $diag = @'
-import sys
+            import sys
 
-def warn_optional(name, exc):
-    print(f"WARNING: {name} import failed: {exc.__class__.__name__}: {exc}")
+            def warn_optional(name, exc):
+                print(f"WARNING: {name} import failed: {exc.__class__.__name__}: {exc}")
 
-try:
-    import torch
-except Exception as exc:
-    print(f"ERROR: torch import failed: {exc.__class__.__name__}: {exc}")
-    sys.exit(1)
+            try:
+                import torch
+            except Exception as exc:
+                print(f"ERROR: torch import failed: {exc.__class__.__name__}: {exc}")
+                sys.exit(1)
 
-print(f"torch {torch.__version__} cuda {getattr(torch.version, 'cuda', None)}")
+            print(f"torch {torch.__version__} cuda {getattr(torch.version, 'cuda', None)}")
 
-try:
-    import flash_attn
-    print("flash_attn import: OK")
-except Exception as exc:
-    warn_optional("flash_attn", exc)
+            try:
+                import flash_attn
+                print("flash_attn import: OK")
+            except Exception as exc:
+                warn_optional("flash_attn", exc)
 
-try:
-    import triton
-    print("triton import: OK")
-except Exception as exc:
-    warn_optional("triton", exc)
+            try:
+                import triton
+                print("triton import: OK")
+            except Exception as exc:
+                warn_optional("triton", exc)
 
-try:
-    import sageattention
-    print("sageattention import: OK")
-except Exception as exc:
-    warn_optional("sageattention", exc)
-'@
+            try:
+                import sageattention
+                print("sageattention import: OK")
+            except Exception as exc:
+                warn_optional("sageattention", exc)
+            '@
             $diag | & $py -
 
         - name: Install optional accelerators (best effort)
