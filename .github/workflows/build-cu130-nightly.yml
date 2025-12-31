@@ -39,9 +39,9 @@ jobs:
             foreach ($script in $scripts) {
               try {
                 [scriptblock]::Create((Get-Content -Raw $script)) | Out-Null
-                Write-Host "Parse OK: $script"
+                Write-Host ("Parse OK: {0}" -f $script)
               } catch {
-                Write-Error "PowerShell parse failed for $script: $($_.Exception.Message)"
+                Write-Error ("PowerShell parse failed for {0}: {1}" -f $script, $_.Exception.Message)
                 exit 1
               }
             }
@@ -63,9 +63,24 @@ jobs:
           shell: pwsh
           working-directory: builder-cu130
           run: |
-            python --version
-            python -c "import torch; print(torch.__version__, torch.version.cuda)"
-            python -c "try: import flash_attn; print('flash_attn import: OK')\nexcept Exception as exc: print(f'WARNING: flash_attn import failed: {exc.__class__.__name__}: {exc}')"
+            $py = Resolve-Path ".\ComfyUI_Windows_portable\python_standalone\python.exe"
+            & $py --version
+            $diag = @'
+            import sys
+            try:
+                import torch
+                print(f"torch {torch.__version__} cuda {getattr(torch.version, 'cuda', None)}")
+            except Exception as exc:
+                print(f"WARNING: torch import failed: {exc.__class__.__name__}: {exc}")
+
+            try:
+                import flash_attn
+                print("flash_attn import: OK")
+            except Exception as exc:
+                print(f"WARNING: flash_attn import failed: {exc.__class__.__name__}: {exc}")
+            '@
+            $diag = $diag -replace '(?m)^ {12}', ''
+            & $py -c $diag
 
         - name: Install optional accelerators (best effort)
           shell: pwsh

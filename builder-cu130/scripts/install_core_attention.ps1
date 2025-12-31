@@ -1,5 +1,16 @@
 $ErrorActionPreference = "Stop"
 
+function Test-SkipFlag {
+  param(
+    [string]$Value
+  )
+  if ([string]::IsNullOrWhiteSpace($Value)) {
+    return $false
+  }
+  $normalized = $Value.Trim().ToLowerInvariant()
+  return ($normalized -eq "1" -or $normalized -eq "true" -or $normalized -eq "yes")
+}
+
 function Invoke-PipInstall {
   param(
     [string]$Python,
@@ -93,6 +104,8 @@ function Test-PackageImport {
   $script = @"
 import base64, importlib, json, sys
 names = json.loads(base64.b64decode('$encoded'))
+if isinstance(names, str):
+    names = [names]
 errors = []
 for name in names:
     try:
@@ -354,6 +367,19 @@ print("\n".join(compatible))
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $python = Join-Path $root "python_standalone/python.exe"
 $manifestPath = Join-Path $root "accel_manifest.json"
+$skipCoreAttention = Test-SkipFlag $env:SKIP_CORE_ATTENTION
+
+if ($skipCoreAttention) {
+  Write-Warning "Skipping core attention installs because SKIP_CORE_ATTENTION is set."
+  @() | ConvertTo-Json -Depth 4 | Out-File -FilePath $manifestPath -Encoding utf8
+  Write-Host "Wrote attention manifest to $manifestPath"
+  exit 0
+}
+
+if (-not (Test-Path $python)) {
+  throw "Python executable not found at $python"
+}
+
 $aiWindowsWhlJson = "https://raw.githubusercontent.com/wildminder/AI-windows-whl/main/wheels.json"
 $aiWindowsIndex = "https://ai-windows-whl.github.io/whl/"
 $torchInfo = Get-TorchInfo -Python $python
@@ -369,10 +395,6 @@ if ($torchInfo) {
   }
 } else {
   Write-Warning "Unable to read torch/python metadata for AI-windows-whl filtering."
-}
-
-if (-not (Test-Path $python)) {
-  throw "Python executable not found at $python"
 }
 
 $packages = @(

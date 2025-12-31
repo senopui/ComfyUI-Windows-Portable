@@ -113,7 +113,13 @@ PYVER
     fi
 }
 
-if [[ -n "${SKIP_CORE_ATTENTION:-}" ]]; then
+is_skip_flag() {
+    local value="${1:-}"
+    value="$(echo "${value}" | tr '[:upper:]' '[:lower:]')"
+    [[ "$value" == "1" || "$value" == "true" || "$value" == "yes" ]]
+}
+
+if is_skip_flag "${SKIP_CORE_ATTENTION:-}"; then
     echo "=== Skipping core attention installs in stage1 (managed separately) ==="
 else
     # Guarded install: flash-attn via AI-windows-whl (binary-only, no source builds)
@@ -125,7 +131,7 @@ fi
 
 verify_torch_or_restore "core attention install group"
 
-if [[ -z "${SKIP_CORE_ATTENTION:-}" ]]; then
+if ! is_skip_flag "${SKIP_CORE_ATTENTION:-}"; then
     # Guarded install: sageattention via AI-windows-whl
     echo "=== Attempting sageattention from AI-windows-whl ==="
     $pip_exe install sageattention --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: sageattention binary wheel not available for this Python+PyTorch+CUDA combination"
@@ -144,7 +150,7 @@ echo "=== Attempting nunchaku from AI-windows-whl ==="
 $pip_exe install nunchaku --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: nunchaku binary wheel not available for this Python+PyTorch+CUDA combination"
 
 # Guarded install: spargeattention via AI-windows-whl
-if [[ -n "${SKIP_SPARGEATTN:-}" ]]; then
+if is_skip_flag "${SKIP_SPARGEATTN:-}"; then
     echo "=== Skipping spargeattention install (managed separately) ==="
 else
     echo "=== Attempting spargeattention from AI-windows-whl ==="

@@ -14,7 +14,11 @@ function Invoke-PipInstall {
   if ($LASTEXITCODE -eq 0) {
     return @{ Success = $true; Error = $null }
   }
-  $errorMessage = if ($output) { "pip exited with code $LASTEXITCODE: $($output.Trim())" } else { "pip exited with code $LASTEXITCODE" }
+  $errorMessage = if ($output) {
+    ("pip exited with code {0}: {1}" -f $LASTEXITCODE, $output.Trim())
+  } else {
+    ("pip exited with code {0}" -f $LASTEXITCODE)
+  }
   return @{ Success = $false; Error = $errorMessage }
 }
 
@@ -69,6 +73,8 @@ function Test-PackageImportAny {
   $script = @"
 import base64, importlib, json, sys
 names = json.loads(base64.b64decode('$encoded'))
+if isinstance(names, str):
+    names = [names]
 errors = []
 for name in names:
     try:
