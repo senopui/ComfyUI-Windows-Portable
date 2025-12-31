@@ -184,8 +184,22 @@ info = {
 }
 print(json.dumps(info))
 "@
-  $raw = (& $Python -c $script 2>&1 | Out-String).TrimEnd()
+  $stderrPath = [System.IO.Path]::GetTempFileName()
+  $raw = ""
+  try {
+    $raw = (& $Python -W ignore -c $script 2> $stderrPath | Out-String).TrimEnd()
+  } finally {
+    if (Test-Path $stderrPath) {
+      $stderr = (Get-Content -Raw $stderrPath).Trim()
+      Remove-Item -Path $stderrPath -Force
+    } else {
+      $stderr = ""
+    }
+  }
   if ($LASTEXITCODE -ne 0 -or -not $raw) {
+    if ($stderr) {
+      Write-Warning "Torch metadata probe failed: $stderr"
+    }
     return $null
   }
   $parsed = Parse-JsonSafe -RawOutput $raw -Source "Get-TorchInfo (python metadata)"
