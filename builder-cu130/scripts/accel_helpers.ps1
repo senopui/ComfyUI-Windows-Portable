@@ -255,11 +255,8 @@ function Get-PythonTag {
     [string]$PythonVersion
   )
   $mm = $null
-  if ($PythonVersion) {
-    $match = [regex]::Match($PythonVersion, "^(\\d+\\.\\d+)")
-    if ($match.Success) {
-      $mm = $match.Groups[1].Value
-    }
+  if ($PythonVersion -and ($PythonVersion -match "^(?<mm>\\d+\\.\\d+)")) {
+    $mm = $Matches.mm
   }
   return (switch ($mm) {
     "3.13" { "cp313" }
