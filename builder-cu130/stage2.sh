@@ -125,6 +125,10 @@ $gcs https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git || echo "WARNIN
 echo "=== Copying attachments ==="
 cp -rf "$workdir"/attachments/. \
     "$workdir"/ComfyUI_Windows_portable/
+# Include repo scripts in portable root (preflight_accel.py expected by launchers)
+mkdir -p "$workdir"/ComfyUI_Windows_portable/scripts
+cp -rf "$workdir"/scripts/. \
+    "$workdir"/ComfyUI_Windows_portable/scripts/
 # Ensure legacy launchers are available at portable root
 cp -f "$workdir"/ComfyUI_Windows_portable/ExtraScripts/run_nvidia_gpu.bat \
     "$workdir"/ComfyUI_Windows_portable/run_nvidia_gpu.bat
@@ -190,8 +194,47 @@ cd "$workdir"/ComfyUI_Windows_portable/ComfyUI/custom_nodes/ComfyUI-Impact-Subpa
 ################################################################################
 # Accelerator preflight (disable dependent nodes when backends are missing)
 echo "=== Running accelerator preflight ==="
-"$workdir"/ComfyUI_Windows_portable/python_standalone/python.exe -s -B \
-    "$workdir"/ComfyUI_Windows_portable/scripts/preflight_accel.py
+preflight_script="$workdir/ComfyUI_Windows_portable/scripts/preflight_accel.py"
+if [ -f "$preflight_script" ]; then
+    "$workdir"/ComfyUI_Windows_portable/python_standalone/python.exe -s -B \
+        "$preflight_script"
+else
+    echo "WARNING: preflight_accel.py not found at $preflight_script; skipping accelerator preflight."
+    PREFLIGHT_PATH="$preflight_script" MANIFEST_PATH="$workdir/accel_manifest.json" \
+        "$workdir"/ComfyUI_Windows_portable/python_standalone/python.exe - <<'PY'
+import json
+import os
+from pathlib import Path
+
+manifest_path = Path(os.environ["MANIFEST_PATH"])
+preflight_path = os.environ["PREFLIGHT_PATH"]
+reason = f"missing preflight script at {preflight_path}"
+entry = {
+    "name": "preflight_accel",
+    "version": None,
+    "source": "stage2-preflight",
+    "success": False,
+    "url": "none",
+    "gate_reason": reason,
+    "error_if_any": reason,
+}
+
+existing = []
+if manifest_path.exists():
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        data = []
+    if isinstance(data, list):
+        existing = data
+    else:
+        existing = [data]
+
+existing.append(entry)
+manifest_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+print(f"Wrote preflight skip entry to {manifest_path}")
+PY
+fi
 
 ################################################################################
 # Run the test (CPU only), also let custom nodes download some models
