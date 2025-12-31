@@ -20,7 +20,7 @@ The nightly build workflow provides bleeding-edge versions of ComfyUI with the l
 Nightly builds *attempt* to install cutting-edge optimization libraries from curated wheel sources. Availability depends on upstream wheels for Python 3.13 + CUDA 13.0, so these are best-effort and explicitly gated when missing.
 
 * **xformers** - Best-effort install attempt (no source builds)
-* **FlashAttention** - Highly optimized attention implementation (PyPI binary-only first, AI-windows-whl fallback; gated when unavailable)
+* **FlashAttention** - Highly optimized attention implementation (PyPI binary-only first, wheels.json resolver with validated wheel URLs + fallback templates; gated when unavailable)
 * **SageAttention** - Advanced attention mechanism with Triton optimizations
 * **triton-windows** - Windows-compatible Triton compiler for custom kernels
 * **NATTEN** - Neighborhood attention for improved quality in certain workloads
@@ -40,7 +40,7 @@ The nightly build workflow includes comprehensive validation:
 1. **Stage 1: Gathering Dependencies**
    * Downloads Python 3.13 standalone
    * Installs PyTorch nightly from CUDA 13.0 channel
-   * Installs bleeding-edge packages from AI-windows-whl
+   * Installs bleeding-edge packages via the wheels.json resolver (validated wheel URLs + fallback templates; no index URLs)
    * Installs standard dependencies from pak files
    * Fails fast if pip attempts to downgrade torch or pull CPU-only builds
    * Attempts optional VCS dependencies (`https://github.com/cozy-comfyui/cozy_comfy` and `https://github.com/cozy-comfyui/cozy_comfyui`) in best-effort mode and records results in `builder-cu130/vcs_optional_manifest.json`
@@ -83,6 +83,10 @@ If any traceback is detected, the build fails and logs are displayed. Evidence l
 === Optional Accelerator Policy
 
 Optional accelerators are installed on a best-effort basis and **must not** fail the workflow when unavailable. Availability is recorded in `builder-cu130/accel_manifest.json` and copied into the portable tree at `ComfyUI/user/default/accel_manifest.json`. Launchers run `scripts/preflight_accel.py` to re-check availability and disable dependent custom nodes when required backends are missing. Stage 2 copies the repo-root `scripts/` directory into the portable root so the preflight entrypoint is always packaged; if it is missing, nightly builds warn and record the skip in `accel_manifest.json`.
+
+Manifest entries capture the requested pattern/version, selected URL (if any), success, gate reason, and stderr excerpts to aid debugging.
+
+NOTE: AI-windows-whl must be consumed via the wheels.json resolver and verified wheel URLs only. Do not reintroduce `-i/--index-url` or `/simple` index assumptions.
 
 == Stability and Support
 

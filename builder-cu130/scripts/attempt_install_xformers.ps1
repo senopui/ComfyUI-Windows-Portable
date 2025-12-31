@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-. (Join-Path $PSScriptRoot "ai_windows_whl_resolver.ps1")
+. (Join-Path $PSScriptRoot "accel_helpers.ps1")
 
 function Write-EnvValue {
   param(
@@ -83,38 +83,29 @@ function Try-PipInstall {
     [string[]]$Arguments
   )
   Write-Host "=== $Label ==="
-  & $Python -s -m pip @Arguments
-  if ($LASTEXITCODE -eq 0) {
-    return $true
-  }
-  Write-Warning "$Label failed with exit code $LASTEXITCODE"
-  return $false
-}
-
-function Get-WheelLinks {
-  param(
-    [string]$IndexUrl,
-    [string]$Pattern
-  )
+  $stderrPath = [System.IO.Path]::GetTempFileName()
+  $stdout = ""
+  $stderr = ""
   try {
-    $page = Invoke-WebRequest -Uri $IndexUrl -UseBasicParsing
-    $matches = [regex]::Matches($page.Content, 'href="([^"]+\.whl)"') | ForEach-Object { $_.Groups[1].Value }
-    if ($Pattern) {
-      $matches = $matches | Where-Object { $_ -match $Pattern }
-    }
-    $links = @()
-    foreach ($match in $matches) {
-      if ($match -match '^https?://') {
-        $links += $match
-      } else {
-        $links += "$IndexUrl$match"
+    $stdout = (& $Python -s -m pip @Arguments 2> $stderrPath | Out-String).TrimEnd()
+  } finally {
+    if (Test-Path $stderrPath) {
+      $stderrRaw = Get-Content -Raw $stderrPath -ErrorAction SilentlyContinue
+      if ($null -ne $stderrRaw) {
+        $stderr = $stderrRaw.Trim()
       }
+      Remove-Item -Path $stderrPath -Force
     }
-    return $links
-  } catch {
-    Write-Warning ("Failed to query index {0}: {1}" -f $IndexUrl, $_.Exception.Message)
-    return @()
   }
+  if ($stdout) {
+    Write-Host $stdout
+  }
+  $exitCode = $LASTEXITCODE
+  if ($exitCode -eq 0) {
+    return @{ Success = $true; Stdout = $stdout; Stderr = $stderr }
+  }
+  Write-Warning "$Label failed with exit code $exitCode"
+  return @{ Success = $false; Stdout = $stdout; Stderr = $stderr }
 }
 
 function Select-CompatibleWheels {
@@ -222,14 +213,22 @@ $version = $null
 $candidateWheel = $null
 $selectedUrl = "none"
 $gateReason = $null
+$stderrExcerpt = $null
+$requestedSpec = "pattern=xformers"
 $explicitWheelUrl = $env:XFORMERS_WHEEL_URL
 if ($explicitWheelUrl) {
   Write-Host "Using xformers wheel URL from environment: $explicitWheelUrl"
   $compat = Select-CompatibleWheels -Python $python -WheelUrls @($explicitWheelUrl) -TorchBaseVersion $torchBase -CudaTag $cudaTag
   if ($compat.Count -gt 0) {
-    $candidateWheel = $compat[0]
-    $source = "explicit-url"
-    $selectedUrl = $candidateWheel
+    $explicitCheck = Test-WheelUrlReachable -Url $explicitWheelUrl
+    if ($explicitCheck.ok) {
+      $candidateWheel = $compat[0]
+      $source = "explicit-url"
+      $selectedUrl = $candidateWheel
+      $requestedSpec = "explicit-url"
+    } else {
+      $errors += "Explicit xformers wheel URL unreachable"
+    }
   } else {
     $errors += "Explicit xformers wheel URL incompatible with torch $torchBase $cudaTag"
   }
@@ -246,23 +245,13 @@ if (-not $candidateWheel) {
     $candidateWheel = $resolved.url
     $source = $resolved.source
     $selectedUrl = $resolved.url
+    if ($resolved.requested) {
+      $requestedSpec = $resolved.requested
+    }
   } else {
     $gateReason = if ($resolved.reason) { $resolved.reason } else { "no wheels.json entry for xformers" }
-  }
-}
-
-if (-not $candidateWheel) {
-  $fallbackIndex = $env:XFORMERS_FALLBACK_INDEX_URL
-  if ($fallbackIndex) {
-    Write-Host "=== Resolving xformers wheels from fallback index: $fallbackIndex ==="
-    $fallbackLinks = Get-WheelLinks -IndexUrl $fallbackIndex -Pattern "xformers"
-    $fallbackCompat = Select-CompatibleWheels -Python $python -WheelUrls $fallbackLinks -TorchBaseVersion $torchBase -CudaTag $cudaTag
-    if ($fallbackCompat.Count -gt 0) {
-      $candidateWheel = ($fallbackCompat | Sort-Object)[-1]
-      $source = "fallback-index"
-      $selectedUrl = $candidateWheel
-    } else {
-      $errors += "Fallback index provided but no compatible xformers wheels found"
+    if ($resolved.requested) {
+      $requestedSpec = $resolved.requested
     }
   }
 }
@@ -273,21 +262,16 @@ if (-not $candidateWheel) {
   Write-Warning "GATED: $gateReason. Skipping install."
   $manifestEntry = [pscustomobject]@{
     name = "xformers"
+    requested = $requestedSpec
     version = $null
     source = "gated"
     success = $false
     url = $selectedUrl
     gate_reason = $gateReason
     error_if_any = if ($errors.Count -gt 0) { $errors -join " | " } else { $null }
+    stderr_excerpt = $stderrExcerpt
   }
-  $existingResults = @()
-  if (Test-Path $manifestPath) {
-    try {
-      $existingResults = Get-Content -Raw $manifestPath | ConvertFrom-Json
-    } catch {
-      Write-Warning "Failed to read existing manifest at $manifestPath; overwriting."
-    }
-  }
+  $existingResults = Read-JsonFileSafe -Path $manifestPath -SourceLabel "accel_manifest.json"
   $combined = @()
   if ($existingResults) {
     $combined += @($existingResults)
@@ -299,7 +283,9 @@ if (-not $candidateWheel) {
   exit 0
 }
 
-$installed = Try-PipInstall -Python $python -Label "Attempting xformers from $source (no deps)" -Arguments @("install", "--no-deps", $candidateWheel)
+$installAttempt = Try-PipInstall -Python $python -Label "Attempting xformers from $source (no deps)" -Arguments @("install", "--no-deps", $candidateWheel)
+$installed = $installAttempt.Success
+$stderrExcerpt = Get-Excerpt -Text $installAttempt.Stderr
 if (-not $installed) {
   $errors += "pip install xformers ($source) failed"
   if (-not $gateReason) {
@@ -343,22 +329,17 @@ if ($installed) {
 
 $manifestEntry = [pscustomobject]@{
   name = "xformers"
+  requested = $requestedSpec
   version = $version
   source = $source
   success = $installed
   url = $selectedUrl
   gate_reason = if (-not $installed) { $gateReason } else { $null }
   error_if_any = if ($errors.Count -gt 0) { $errors -join " | " } else { $null }
+  stderr_excerpt = $stderrExcerpt
 }
 
-$existingResults = @()
-if (Test-Path $manifestPath) {
-  try {
-    $existingResults = Get-Content -Raw $manifestPath | ConvertFrom-Json
-  } catch {
-    Write-Warning "Failed to read existing manifest at $manifestPath; overwriting."
-  }
-}
+$existingResults = Read-JsonFileSafe -Path $manifestPath -SourceLabel "accel_manifest.json"
 
 $combined = @()
 if ($existingResults) {
