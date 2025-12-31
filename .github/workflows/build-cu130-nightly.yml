@@ -33,11 +33,16 @@ jobs:
           working-directory: builder-cu130
           run: |
             $scripts = @(
+              "./scripts/accel_helpers.ps1",
               "./scripts/install_core_attention.ps1",
               "./scripts/install_optional_accel.ps1",
-              "./scripts/attempt_install_xformers.ps1"
+              "./scripts/attempt_install_xformers.ps1",
+              "./scripts/ai_windows_whl_resolver.ps1"
             )
             foreach ($script in $scripts) {
+              if (-not (Test-Path $script)) {
+                continue
+              }
               try {
                 [scriptblock]::Create((Get-Content -Raw $script)) | Out-Null
                 Write-Host ("Parse OK: {0}" -f $script)
