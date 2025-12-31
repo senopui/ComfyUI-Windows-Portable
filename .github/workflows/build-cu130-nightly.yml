@@ -34,7 +34,8 @@ jobs:
           run: |
             $scripts = @(
               "./scripts/install_core_attention.ps1",
-              "./scripts/install_optional_accel.ps1"
+              "./scripts/install_optional_accel.ps1",
+              "./scripts/attempt_install_xformers.ps1"
             )
             foreach ($script in $scripts) {
               try {
