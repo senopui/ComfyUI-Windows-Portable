@@ -10,17 +10,20 @@ function Invoke-PipInstall {
   )
   Write-Host "=== $Label ==="
   $stderrPath = [System.IO.Path]::GetTempFileName()
+  $stdoutPath = [System.IO.Path]::GetTempFileName()
   $stdout = ""
   $stderr = ""
   try {
-    $stdout = (& $Python -s -m pip @Arguments 2> $stderrPath | Out-String).TrimEnd()
+    & $Python -s -m pip @Arguments 1> $stdoutPath 2> $stderrPath
   } finally {
+    $stdout = (Read-TextFileSafe -Path $stdoutPath).TrimEnd()
     if (Test-Path $stderrPath) {
-      $stderrRaw = Get-Content -Raw $stderrPath -ErrorAction SilentlyContinue
-      if ($null -ne $stderrRaw) {
-        $stderr = $stderrRaw.Trim()
-      }
+      $stderrRaw = Read-TextFileSafe -Path $stderrPath
+      $stderr = $stderrRaw.Trim()
       Remove-Item -Path $stderrPath -Force
+    }
+    if (Test-Path $stdoutPath) {
+      Remove-Item -Path $stdoutPath -Force
     }
   }
   if ($stdout) {
@@ -42,11 +45,11 @@ function Get-PackageVersion {
     [string]$Python,
     [string]$PackageName
   )
-  $version = & $Python -c "import importlib.metadata as m; print(m.version('$PackageName'))" 2>$null
+  $version = (& $Python -c "import importlib.metadata as m; print(m.version('$PackageName'))" 2>$null | Out-String).TrimEnd()
   if ($LASTEXITCODE -ne 0) {
     return $null
   }
-  return $version.Trim()
+  return $version
 }
 
 function Get-FirstPackageVersion {
@@ -101,7 +104,7 @@ for name in names:
 print("; ".join(errors))
 sys.exit(1)
 "@
-  $output = & $Python -c $script 2>&1
+  $output = (& $Python -c $script 2>&1 | Out-String).TrimEnd()
   if ($LASTEXITCODE -eq 0) {
     return @{ Success = $true; Error = $null; Import = $output.Trim() }
   }
@@ -130,7 +133,7 @@ if "cu130" not in ver:
     sys.exit(1)
 print(ver)
 "@
-  $output = & $Python -c $script 2>&1
+  $output = (& $Python -c $script 2>&1 | Out-String).TrimEnd()
   if ($LASTEXITCODE -eq 0) {
     return @{ Success = $true; Version = $output.Trim() }
   }
@@ -751,7 +754,6 @@ $combined += $results
 $combined | ConvertTo-Json -Depth 4 | Out-File -FilePath $manifestPath -Encoding utf8
 Write-Host "Wrote optional accelerator manifest entries to $manifestPath"
 
-Write-Host "=== Optional accelerator summary ==="
-$results | Select-Object name, version, source, success | Format-Table -AutoSize
+Write-AccelSummary -Title "Optional accelerators" -Results $results
 
 exit 0

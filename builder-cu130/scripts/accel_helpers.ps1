@@ -1,3 +1,17 @@
+function Read-TextFileSafe {
+  param(
+    [string]$Path
+  )
+  if (-not (Test-Path $Path)) {
+    return ""
+  }
+  $raw = Get-Content -Raw $Path -ErrorAction SilentlyContinue
+  if ($null -eq $raw) {
+    return ""
+  }
+  return [string]$raw
+}
+
 function Parse-JsonSafe {
   param(
     [Parameter(Mandatory = $true)]
@@ -10,8 +24,11 @@ function Parse-JsonSafe {
   } else {
     [string]::Join("`n", $RawOutput)
   }
-  $trimmed = ($rawString -replace "^\uFEFF", "").Trim()
+  $normalized = ($rawString -replace "^\uFEFF", "")
+  $trimmed = $normalized.Trim()
   $preview = if ($trimmed.Length -gt 200) { $trimmed.Substring(0, 200) } else { $trimmed }
+  $candidate = $trimmed
+  $usedLastJsonLine = $false
 
   if (-not $trimmed) {
     Write-Warning "JSON parse skipped for ${Source}: empty response."
@@ -24,18 +41,33 @@ function Parse-JsonSafe {
   }
 
   if (-not ($trimmed.StartsWith("{") -or $trimmed.StartsWith("["))) {
-    $reason = if ($trimmed.StartsWith("<")) { "HTML response detected" } else { "non-JSON output detected" }
-    Write-Warning "JSON parse skipped for ${Source}: $reason."
-    return [pscustomobject]@{
-      ok = $false
-      reason = $reason
-      raw_preview = $preview
-      source = $Source
+    $lines = $trimmed -split "`r?`n"
+    for ($idx = $lines.Length - 1; $idx -ge 0; $idx--) {
+      $line = $lines[$idx]
+      if (-not $line) {
+        continue
+      }
+      $lineTrimmed = $line.Trim()
+      if ($lineTrimmed.StartsWith("{") -or $lineTrimmed.StartsWith("[")) {
+        $candidate = $lineTrimmed
+        $usedLastJsonLine = $true
+        break
+      }
+    }
+    if (-not $usedLastJsonLine) {
+      $reason = if ($trimmed.StartsWith("<")) { "HTML response detected" } else { "non-JSON output detected" }
+      Write-Warning "JSON parse skipped for ${Source}: $reason."
+      return [pscustomobject]@{
+        ok = $false
+        reason = $reason
+        raw_preview = $preview
+        source = $Source
+      }
     }
   }
 
   try {
-    $parsed = $trimmed | ConvertFrom-Json
+    $parsed = $candidate | ConvertFrom-Json
     return [pscustomobject]@{
       ok = $true
       data = $parsed
@@ -91,6 +123,36 @@ function Read-JsonFileSafe {
     return @($parsed.data)
   }
   return @($parsed.data)
+}
+
+function Write-AccelSummary {
+  param(
+    [string]$Title,
+    [object[]]$Results
+  )
+  $rows = @($Results | ForEach-Object {
+    $status = if ($_.success) {
+      "success"
+    } elseif ($_.gated -or $_.gate_reason) {
+      "gated"
+    } else {
+      "failed"
+    }
+    [pscustomobject]@{
+      name = $_.name
+      status = $status
+      version = $_.version
+      source = $_.source
+    }
+  })
+
+  $successCount = ($rows | Where-Object { $_.status -eq "success" }).Count
+  $gatedCount = ($rows | Where-Object { $_.status -eq "gated" }).Count
+  $failedCount = ($rows | Where-Object { $_.status -eq "failed" }).Count
+
+  Write-Host "=== $Title summary ==="
+  Write-Host ("Success: {0} | Gated: {1} | Failed: {2}" -f $successCount, $gatedCount, $failedCount)
+  $rows | Format-Table -AutoSize
 }
 
 $script:WheelIndexCache = @{}
@@ -157,20 +219,21 @@ info = {
 print(json.dumps(info))
 "@
   $stderrPath = [System.IO.Path]::GetTempFileName()
+  $stdoutPath = [System.IO.Path]::GetTempFileName()
   $raw = ""
   try {
-    $raw = (& $Python -W ignore -c $script 2> $stderrPath | Out-String).TrimEnd()
+    & $Python -W ignore -c $script 1> $stdoutPath 2> $stderrPath
   } finally {
+    $raw = (Read-TextFileSafe -Path $stdoutPath).TrimEnd()
     if (Test-Path $stderrPath) {
-      $stderrRaw = Get-Content -Raw $stderrPath -ErrorAction SilentlyContinue
-      if ($null -eq $stderrRaw) {
-        $stderr = ""
-      } else {
-        $stderr = $stderrRaw.Trim()
-      }
+      $stderrRaw = Read-TextFileSafe -Path $stderrPath
+      $stderr = $stderrRaw.Trim()
       Remove-Item -Path $stderrPath -Force
     } else {
       $stderr = ""
+    }
+    if (Test-Path $stdoutPath) {
+      Remove-Item -Path $stdoutPath -Force
     }
   }
   if ($LASTEXITCODE -ne 0 -or -not $raw) {
