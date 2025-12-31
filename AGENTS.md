@@ -1,38 +1,44 @@
-# ComfyUI-Windows-Portable Agent Instructions
+# Agent Guidance (Repo Root)
 
-## Workflow norms
-- Always start with `/plan` for build-system work.
-- Always provide verification evidence (commands + outputs + CI run links).
-- Avoid parallel threads touching the same files.
+This repo builds **Windows portable ComfyUI** with two tracks:
+- **cu130** = STABLE (conservative, must not regress)
+- **cu130-nightly** = NIGHTLY (experimental: Python 3.13+, Torch nightly/dev, CUDA 13)
 
-## Sharp edges (never break)
-- `cu130` is **stable**; `cu130-nightly` is **experimental**. Never regress stable intent.
-- Optional accelerators are best-effort; never hard-fail CI. Gate + warn + write manifest(s).
-- Never allow pip to downgrade torch or pull CPU torch; fail fast or skip/gate the package.
-- Preserve port **8188**, `extra_model_paths.yaml.example`, and ComfyUI API surface.
+## Non-negotiables
+1) **Start with `/plan`** for any change that touches build scripts, workflows, or dependency logic.
+2) **Small PRs** > mega PRs. Fix the **first fatal error** before chasing warnings.
+3) **Evidence-based output only**:
+   - If you say “PASS”, include command output or CI run links.
+   - Don’t claim tests you didn’t run.
+4) **Stable safety**:
+   - If a change is risky, it must be **nightly-only**.
+   - Stable must not silently change torch/cuda/python behavior.
+5) **Optional accelerators must never hard-fail CI**:
+   - install attempt → validate import → if fail: **warn + gate + record in manifest** → continue.
+6) **Never let pip downgrade torch or pull CPU-only torch**:
+   - if a package forces it, install with `--no-deps` or gate/skip it.
 
-## Build/packaging guardrails (concise)
-- Python 3.13 standalone + PyTorch nightly cu130 are baseline.
-- Keep `_cu130` naming and 2.14GB split size.
-- Use shallow clones for custom nodes; keep quick-test with `--cpu`.
+## Repo “sharp edges” (common failure modes)
+- **PowerShell strings**: never write `"$var:"` inside double quotes.
+  - use `"${var}:"` or `("{0}:" -f $var)`
+- **Skip flags**: `"0"` must mean “do NOT skip”.
+  - only `1/true/yes` should mean “skip”
+- **Diagnostics** must use **builder python_standalone**, not system Python.
+- **JSON parsing**: don’t `ConvertFrom-Json` on unknown output; validate first and keep stdout clean (don’t merge stderr into JSON).
 
-## PowerShell robustness
-- Capture stdout/stderr (`2>&1 | Out-String`) and log it.
-- Validate JSON before writing manifests; fail fast on invalid JSON.
-- Avoid interactive prompts; non-interactive installs only.
+## Where the real rules live
+- Build/deps/scripts: `builder-cu130/AGENTS.md`
+- GitHub Actions workflows & CI: `.github/AGENTS.md`
+- Docs-only changes: `docs/AGENTS.md`
 
-## Testing/validation checklist (local + CI evidence)
-- Local checks (when touching build/CI):
-  - `bash -n builder-cu130/stage1.sh`
-  - `bash -n builder-cu130/stage2.sh`
-  - `bash -n builder-cu130/stage3.sh`
-  - `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/build-cu130-nightly.yml'))"` (requires PyYAML; if unavailable, note as not run)
-- CI evidence: link the GitHub Actions run and cite log sections for Stage 1/2/3, quick-test, and manifest upload.
+## Quick verification checklist (minimum bar)
+- Scripts:
+  - `bash -n builder-cu130/stage1.sh builder-cu130/stage2.sh builder-cu130/stage3.sh`
+  - PowerShell parse check (Windows runner or local pwsh):
+    - `[scriptblock]::Create((Get-Content -Raw <file.ps1>)) | Out-Null`
+- CI:
+  - If nightly-related: link a passing **cu130-nightly** run
+  - If stable-impacting: link a passing **cu130** run
 
-## Review guidelines
-- **P0**: CI red, stable build broken, torch downgraded/CPU torch pulled, segfault, or interactive prompt hang.
-- **P1**: nightly-only regression, optional accelerator missing but gated, manifest missing/invalid, or validation skipped.
-
-## Scoped instructions
-- `.github/AGENTS.md` for CI/workflow details.
-- `docs/AGENTS.md` for documentation guidance.
+## When in doubt
+Prefer **gating** (warn + manifest) over “red CI for optional stuff”.

@@ -1,18 +1,13 @@
-# docs Scoped Instructions
+# Agent Guidance (docs)
 
-## Documentation norms
-- Keep guidance aligned with build behavior and CI workflows.
-- Keep wording compact; avoid duplicating long explanations from root guidance.
+Docs edits must stay factual and aligned with current behavior.
 
-## Sharp edges to document consistently
-- `cu130` is stable; `cu130-nightly` is experimental.
-- Optional accelerators are best-effort; never hard-fail CI.
-- Never allow pip to downgrade torch or pull CPU torch; fail fast or skip/gate.
-- Preserve port 8188 and ComfyUI API compatibility notes.
+## Rules
+- Don’t claim CI/test results you didn’t verify.
+- If behavior differs between cu130 and cu130-nightly, say so clearly.
+- Keep troubleshooting sections evidence-driven (link to Actions logs or manifests).
 
-## Verification evidence (for doc changes)
-- Reference exact commands and CI log locations that prove the guidance.
-
-## Review guidelines
-- **P0**: CI red, stable build broken, torch downgraded/CPU torch pulled, segfault, or interactive prompt hang.
-- **P1**: nightly-only regression, optional accelerator missing but gated, manifest missing/invalid, or validation skipped.
+## Good docs updates
+- Explain gating behavior for optional accelerators.
+- Explain where manifests/artifacts live in Actions.
+- Keep “nightly is experimental” explicit.

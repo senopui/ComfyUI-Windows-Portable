@@ -2,10 +2,13 @@
 applyTo: ".github/workflows/**"
 ---
 
+Always follow AGENTS.md guidance (root + scoped AGENTS.md).
+
 # GitHub Actions workflows (.github/workflows/**)
 
 ## Workflow norms
 - /plan first for build-system work.
+- Fix the **first fatal error** before warnings.
 - Provide verification evidence (commands + outputs + CI run links).
 - Avoid parallel edits on the same files.
 
@@ -15,8 +18,11 @@ applyTo: ".github/workflows/**"
 - Never allow pip to downgrade torch or pull CPU torch; fail fast or skip/gate.
 
 ## PowerShell robustness
-- Capture stdout/stderr (`2>&1 | Out-String`) and log it.
-- Validate JSON before writing manifests; fail fast on invalid JSON.
+- Never write `"$var:"` inside double quotes; use `${var}:` or format strings.
+- Never `ConvertFrom-Json` on unknown output; validate JSON first.
+- Keep stdout clean for JSON parsing (don’t merge stderr into JSON output).
+- Skip flags: only `1/true/yes` means “skip”; string `"0"` must not skip.
+- Diagnostics must use `python_standalone`, not system python; avoid fragile `python -c` quoting (prefer stdin here-strings).
 
 ## Where to look first
 - Existing workflow files in `.github/workflows/` for patterns already in use
