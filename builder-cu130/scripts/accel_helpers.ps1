@@ -313,6 +313,7 @@ function Resolve-AIWindowsWheelUrl {
     [string]$PythonTag,
     [string]$TorchMinimum = "2.10.0",
     [switch]$AllowAbi3,
+    [switch]$SkipFallback,
     [pscustomobject]$TorchInfo
   )
   $requested = if ($PackageVersionPattern) {
@@ -331,6 +332,7 @@ function Resolve-AIWindowsWheelUrl {
       reason = "torch metadata unavailable"
       source = "wheels-json"
       requested = $requested
+      candidate_url = $null
     }
   }
 
@@ -343,6 +345,7 @@ function Resolve-AIWindowsWheelUrl {
       reason = "unsupported python version $($TorchInfo.python_version)"
       source = "wheels-json"
       requested = $requested
+      candidate_url = $null
     }
   }
 
@@ -353,6 +356,7 @@ function Resolve-AIWindowsWheelUrl {
       reason = "wheels.json unavailable"
       source = "wheels-json"
       requested = $requested
+      candidate_url = $null
     }
   }
 
@@ -363,6 +367,7 @@ function Resolve-AIWindowsWheelUrl {
       reason = "no wheels.json package matched pattern '$PackagePattern'"
       source = "wheels-json"
       requested = $requested
+      candidate_url = $null
     }
   }
 
@@ -451,6 +456,7 @@ function Resolve-AIWindowsWheelUrl {
       reason = $reason
       source = "wheels-json"
       requested = $requested
+      candidate_url = $null
     }
   }
 
@@ -463,6 +469,17 @@ function Resolve-AIWindowsWheelUrl {
       reason = $null
       source = "wheels-json"
       requested = $requested
+      candidate_url = $selected.url
+    }
+  }
+
+  if ($SkipFallback) {
+    return [pscustomobject]@{
+      url = $null
+      reason = "resolved wheel URL unreachable"
+      source = "wheels-json"
+      requested = $requested
+      candidate_url = $selected.url
     }
   }
 
@@ -475,6 +492,7 @@ function Resolve-AIWindowsWheelUrl {
         reason = $null
         source = "fallback-template"
         requested = $requested
+        candidate_url = $selected.url
       }
     }
   }
@@ -484,5 +502,6 @@ function Resolve-AIWindowsWheelUrl {
     reason = "resolved wheel URL unreachable; fallback templates failed"
     source = "wheels-json"
     requested = $requested
+    candidate_url = $selected.url
   }
 }
