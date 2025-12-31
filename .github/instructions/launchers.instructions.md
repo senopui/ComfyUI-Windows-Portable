@@ -6,6 +6,7 @@ applyTo: "**/*.bat"
 
 ## Workflow norms
 - /plan first for build-system work.
+- Fix the **first fatal error** before warnings.
 - Provide verification evidence (commands + outputs + CI run links).
 - Avoid parallel edits on the same files.
 
