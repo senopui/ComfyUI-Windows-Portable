@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-. (Join-Path $PSScriptRoot "ai_windows_whl_resolver.ps1")
+. (Join-Path $PSScriptRoot "accel_helpers.ps1")
 
 function Invoke-PipInstall {
   param(
@@ -9,19 +9,32 @@ function Invoke-PipInstall {
     [string[]]$Arguments
   )
   Write-Host "=== $Label ==="
-  $output = & $Python -s -m pip @Arguments 2>&1 | Out-String
-  if ($output) {
-    Write-Host $output.TrimEnd()
+  $stderrPath = [System.IO.Path]::GetTempFileName()
+  $stdout = ""
+  $stderr = ""
+  try {
+    $stdout = (& $Python -s -m pip @Arguments 2> $stderrPath | Out-String).TrimEnd()
+  } finally {
+    if (Test-Path $stderrPath) {
+      $stderrRaw = Get-Content -Raw $stderrPath -ErrorAction SilentlyContinue
+      if ($null -ne $stderrRaw) {
+        $stderr = $stderrRaw.Trim()
+      }
+      Remove-Item -Path $stderrPath -Force
+    }
+  }
+  if ($stdout) {
+    Write-Host $stdout
   }
   if ($LASTEXITCODE -eq 0) {
-    return @{ Success = $true; Error = $null }
+    return @{ Success = $true; Error = $null; Stdout = $stdout; Stderr = $stderr }
   }
-  $errorMessage = if ($output) {
-    ("pip exited with code {0}: {1}" -f $LASTEXITCODE, $output.Trim())
+  $errorMessage = if ($stdout) {
+    ("pip exited with code {0}: {1}" -f $LASTEXITCODE, $stdout.Trim())
   } else {
     ("pip exited with code {0}" -f $LASTEXITCODE)
   }
-  return @{ Success = $false; Error = $errorMessage }
+  return @{ Success = $false; Error = $errorMessage; Stdout = $stdout; Stderr = $stderr }
 }
 
 function Get-PackageVersion {
@@ -239,11 +252,7 @@ if (-not (Test-Path $python)) {
 $torchInfo = Get-TorchInfoFromPython -Python $python
 $pythonTag = $null
 if ($torchInfo) {
-  $pythonTag = switch ($torchInfo.python_version) {
-    "3.13" { "cp313" }
-    "3.12" { "cp312" }
-    default { $null }
-  }
+  $pythonTag = Get-PythonTag -PythonVersion $torchInfo.python_version
 }
 
 $results = @()
@@ -251,21 +260,25 @@ $results = @()
 function Add-Result {
   param(
     [string]$Name,
+    [string]$Requested,
     [string]$Version,
     [string]$Source,
     [bool]$Success,
     [string]$Url,
     [string]$GateReason,
-    [string]$ErrorMessage
+    [string]$ErrorMessage,
+    [string]$StderrExcerpt
   )
   $script:results += [pscustomobject]@{
     name = $Name
+    requested = $Requested
     version = $Version
     source = $Source
     success = $Success
     url = if ($Url) { $Url } else { "none" }
     gate_reason = $GateReason
     error_if_any = $ErrorMessage
+    stderr_excerpt = $StderrExcerpt
   }
 }
 
@@ -278,6 +291,8 @@ try {
   $nunchakuSuccess = $false
   $nunchakuUrl = "none"
   $nunchakuGateReason = $null
+  $nunchakuRequested = "nunchaku>=$nunchakuMinVersion (pattern=nunchaku)"
+  $nunchakuStderr = $null
 
   if ($nunchakuVersion) {
     if (Test-VersionAtLeast -Python $python -Version $nunchakuVersion -Minimum $nunchakuMinVersion) {
@@ -297,8 +312,10 @@ try {
         $nunchakuSuccess = $true
         $nunchakuErrors = @()
         $nunchakuUrl = $ghUrl
+        $nunchakuStderr = Get-Excerpt -Text $installAttempt.Stderr
       } else {
         $nunchakuErrors += $installAttempt.Error
+        $nunchakuStderr = Get-Excerpt -Text $installAttempt.Stderr
       }
     } else {
       $nunchakuErrors += "GitHub release wheel unavailable"
@@ -307,15 +324,20 @@ try {
 
   if (-not $nunchakuSuccess) {
     $resolved = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "nunchaku" -TorchInfo $torchInfo -PythonTag $pythonTag -AllowAbi3
+    if ($resolved.requested) {
+      $nunchakuRequested = $resolved.requested
+    }
     if ($resolved.url) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing nunchaku from AI-windows-whl wheels.json" -Arguments @("install", "--no-deps", "--force-reinstall", $resolved.url)
+      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing nunchaku from AI-windows-whl wheel URL" -Arguments @("install", "--no-deps", "--force-reinstall", $resolved.url)
       if ($installAttempt.Success) {
         $nunchakuSource = $resolved.source
         $nunchakuSuccess = $true
         $nunchakuErrors = @()
         $nunchakuUrl = $resolved.url
+        $nunchakuStderr = Get-Excerpt -Text $installAttempt.Stderr
       } else {
         $nunchakuErrors += $installAttempt.Error
+        $nunchakuStderr = Get-Excerpt -Text $installAttempt.Stderr
       }
     } else {
       $nunchakuGateReason = if ($resolved.reason) { $resolved.reason } else { "wheels.json wheel unavailable" }
@@ -329,8 +351,10 @@ try {
       $nunchakuSource = "source"
       $nunchakuSuccess = $true
       $nunchakuErrors = @()
+      $nunchakuStderr = Get-Excerpt -Text $installAttempt.Stderr
     } else {
       $nunchakuErrors += $installAttempt.Error
+      $nunchakuStderr = Get-Excerpt -Text $installAttempt.Stderr
     }
   }
 
@@ -359,7 +383,7 @@ try {
       $nunchakuGateReason = $nunchakuErrorMessage
     }
   }
-  Add-Result -Name "nunchaku" -Version $nunchakuVersion -Source $nunchakuSource -Success $nunchakuSuccess -Url $nunchakuUrl -GateReason $nunchakuGateReason -ErrorMessage (if ($nunchakuErrors.Count -gt 0) { $nunchakuErrors -join " | " } else { $null })
+  Add-Result -Name "nunchaku" -Requested $nunchakuRequested -Version $nunchakuVersion -Source $nunchakuSource -Success $nunchakuSuccess -Url $nunchakuUrl -GateReason $nunchakuGateReason -ErrorMessage (if ($nunchakuErrors.Count -gt 0) { $nunchakuErrors -join " | " } else { $null }) -StderrExcerpt $nunchakuStderr
   Invoke-TorchGuard -Python $python -Root $root -Label "nunchaku install group"
 
   # SpargeAttn (spas_sage_attn / sparse_sageattn)
@@ -371,6 +395,8 @@ try {
   $spargePackageInfo = Get-FirstPackageVersion -Python $python -PackageNames @("spas_sage_attn", "sparse_sageattn")
   $spargeUrl = "none"
   $spargeGateReason = $null
+  $spargeRequested = "spargeattn (pattern=spargeattn)"
+  $spargeStderr = $null
 
   if ($spargePackageInfo) {
     $spargeSuccess = $true
@@ -393,8 +419,10 @@ try {
           $spargeSuccess = $true
           $spargeErrors = @()
           $spargeUrl = $ghUrl
+          $spargeStderr = Get-Excerpt -Text $installAttempt.Stderr
         } else {
           $spargeErrors += $installAttempt.Error
+          $spargeStderr = Get-Excerpt -Text $installAttempt.Stderr
         }
       } else {
         $spargeErrors += "GitHub release wheel unavailable"
@@ -417,6 +445,7 @@ try {
       $buildTools = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn build prerequisites" -Arguments @("install", "--upgrade", "pip", "setuptools", "wheel", "ninja")
       if (-not $buildTools.Success) {
         $spargeErrors += $buildTools.Error
+        $spargeStderr = Get-Excerpt -Text $buildTools.Stderr
       } else {
         $spargeRepo = Join-Path $root "spargeattn-src"
         if (Test-Path $spargeRepo) {
@@ -458,8 +487,10 @@ try {
                     $spargeSuccess = $true
                     $spargeErrors = @()
                   }
+                  $spargeStderr = Get-Excerpt -Text $installAttempt.Stderr
                 } else {
                   $spargeErrors += $installAttempt.Error
+                  $spargeStderr = Get-Excerpt -Text $installAttempt.Stderr
                 }
               }
             }
@@ -473,15 +504,20 @@ try {
 
   if (-not $spargeSuccess -and $spargeNightlyEnabled -and $spargeTorchReady) {
     $resolved = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "spargeattn" -TorchInfo $torchInfo -PythonTag $pythonTag -AllowAbi3
+    if ($resolved.requested) {
+      $spargeRequested = $resolved.requested
+    }
     if ($resolved.url) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from wheels.json" -Arguments @("install", "--no-deps", "--force-reinstall", $resolved.url)
+      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from wheel URL" -Arguments @("install", "--no-deps", "--force-reinstall", $resolved.url)
       if ($installAttempt.Success) {
         $spargeSource = $resolved.source
         $spargeSuccess = $true
         $spargeErrors = @()
         $spargeUrl = $resolved.url
+        $spargeStderr = Get-Excerpt -Text $installAttempt.Stderr
       } else {
         $spargeErrors += $installAttempt.Error
+        $spargeStderr = Get-Excerpt -Text $installAttempt.Stderr
       }
     } else {
       $spargeGateReason = if ($resolved.reason) { $resolved.reason } else { "wheels.json wheel unavailable" }
@@ -522,7 +558,7 @@ try {
       $spargeGateReason = $spargeErrorMessage
     }
   }
-  Add-Result -Name "spargeattn" -Version $spargeVersion -Source $spargeSource -Success $spargeSuccess -Url $spargeUrl -GateReason $spargeGateReason -ErrorMessage (if ($spargeErrors.Count -gt 0) { $spargeErrors -join " | " } else { $null })
+  Add-Result -Name "spargeattn" -Requested $spargeRequested -Version $spargeVersion -Source $spargeSource -Success $spargeSuccess -Url $spargeUrl -GateReason $spargeGateReason -ErrorMessage (if ($spargeErrors.Count -gt 0) { $spargeErrors -join " | " } else { $null }) -StderrExcerpt $spargeStderr
   Invoke-TorchGuard -Python $python -Root $root -Label "spargeattn install group"
 
   # NATTEN
@@ -532,6 +568,8 @@ try {
   $nattenSuccess = $false
   $nattenUrl = "none"
   $nattenGateReason = $null
+  $nattenRequested = "natten (pattern=natten)"
+  $nattenStderr = $null
 
   if ($nattenVersion) {
     $nattenSuccess = $true
@@ -544,22 +582,29 @@ try {
       $nattenSource = "pypi"
       $nattenSuccess = $true
       $nattenErrors = @()
+      $nattenStderr = Get-Excerpt -Text $installAttempt.Stderr
     } else {
       $nattenErrors += $installAttempt.Error
+      $nattenStderr = Get-Excerpt -Text $installAttempt.Stderr
     }
   }
 
   if (-not $nattenSuccess) {
     $resolved = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "natten" -TorchInfo $torchInfo -PythonTag $pythonTag -AllowAbi3
+    if ($resolved.requested) {
+      $nattenRequested = $resolved.requested
+    }
     if ($resolved.url) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing natten from AI-windows-whl wheels.json" -Arguments @("install", "--no-deps", "--force-reinstall", $resolved.url)
+      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing natten from AI-windows-whl wheel URL" -Arguments @("install", "--no-deps", "--force-reinstall", $resolved.url)
       if ($installAttempt.Success) {
         $nattenSource = $resolved.source
         $nattenSuccess = $true
         $nattenErrors = @()
         $nattenUrl = $resolved.url
+        $nattenStderr = Get-Excerpt -Text $installAttempt.Stderr
       } else {
         $nattenErrors += $installAttempt.Error
+        $nattenStderr = Get-Excerpt -Text $installAttempt.Stderr
       }
     } else {
       $nattenGateReason = if ($resolved.reason) { $resolved.reason } else { "wheels.json wheel unavailable" }
@@ -573,8 +618,10 @@ try {
       $nattenSource = "source"
       $nattenSuccess = $true
       $nattenErrors = @()
+      $nattenStderr = Get-Excerpt -Text $installAttempt.Stderr
     } else {
       $nattenErrors += $installAttempt.Error
+      $nattenStderr = Get-Excerpt -Text $installAttempt.Stderr
     }
   }
 
@@ -599,7 +646,7 @@ try {
       $nattenGateReason = $nattenErrorMessage
     }
   }
-  Add-Result -Name "natten" -Version $nattenVersion -Source $nattenSource -Success $nattenSuccess -Url $nattenUrl -GateReason $nattenGateReason -ErrorMessage (if ($nattenErrors.Count -gt 0) { $nattenErrors -join " | " } else { $null })
+  Add-Result -Name "natten" -Requested $nattenRequested -Version $nattenVersion -Source $nattenSource -Success $nattenSuccess -Url $nattenUrl -GateReason $nattenGateReason -ErrorMessage (if ($nattenErrors.Count -gt 0) { $nattenErrors -join " | " } else { $null }) -StderrExcerpt $nattenStderr
   Invoke-TorchGuard -Python $python -Root $root -Label "natten install group"
 
   # bitsandbytes
@@ -609,6 +656,8 @@ try {
   $bnbSuccess = $false
   $bnbUrl = "none"
   $bnbGateReason = $null
+  $bnbRequested = "bitsandbytes (pattern=bitsandbytes)"
+  $bnbStderr = $null
 
   if ($bnbVersion) {
     $bnbSuccess = $true
@@ -621,22 +670,29 @@ try {
       $bnbSource = "pypi"
       $bnbSuccess = $true
       $bnbErrors = @()
+      $bnbStderr = Get-Excerpt -Text $installAttempt.Stderr
     } else {
       $bnbErrors += $installAttempt.Error
+      $bnbStderr = Get-Excerpt -Text $installAttempt.Stderr
     }
   }
 
   if (-not $bnbSuccess) {
     $resolved = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "bitsandbytes" -TorchInfo $torchInfo -PythonTag $pythonTag -AllowAbi3
+    if ($resolved.requested) {
+      $bnbRequested = $resolved.requested
+    }
     if ($resolved.url) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing bitsandbytes from AI-windows-whl wheels.json" -Arguments @("install", "--no-deps", "--force-reinstall", $resolved.url)
+      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing bitsandbytes from AI-windows-whl wheel URL" -Arguments @("install", "--no-deps", "--force-reinstall", $resolved.url)
       if ($installAttempt.Success) {
         $bnbSource = $resolved.source
         $bnbSuccess = $true
         $bnbErrors = @()
         $bnbUrl = $resolved.url
+        $bnbStderr = Get-Excerpt -Text $installAttempt.Stderr
       } else {
         $bnbErrors += $installAttempt.Error
+        $bnbStderr = Get-Excerpt -Text $installAttempt.Stderr
       }
     } else {
       $bnbGateReason = if ($resolved.reason) { $resolved.reason } else { "wheels.json wheel unavailable" }
@@ -650,8 +706,10 @@ try {
       $bnbSource = "source"
       $bnbSuccess = $true
       $bnbErrors = @()
+      $bnbStderr = Get-Excerpt -Text $installAttempt.Stderr
     } else {
       $bnbErrors += $installAttempt.Error
+      $bnbStderr = Get-Excerpt -Text $installAttempt.Stderr
     }
   }
 
@@ -676,20 +734,13 @@ try {
       $bnbGateReason = $bnbErrorMessage
     }
   }
-  Add-Result -Name "bitsandbytes" -Version $bnbVersion -Source $bnbSource -Success $bnbSuccess -Url $bnbUrl -GateReason $bnbGateReason -ErrorMessage (if ($bnbErrors.Count -gt 0) { $bnbErrors -join " | " } else { $null })
+  Add-Result -Name "bitsandbytes" -Requested $bnbRequested -Version $bnbVersion -Source $bnbSource -Success $bnbSuccess -Url $bnbUrl -GateReason $bnbGateReason -ErrorMessage (if ($bnbErrors.Count -gt 0) { $bnbErrors -join " | " } else { $null }) -StderrExcerpt $bnbStderr
   Invoke-TorchGuard -Python $python -Root $root -Label "bitsandbytes install group"
 } catch {
   Write-Warning "Optional accelerator install encountered an unexpected error: $($_.Exception.Message)"
 }
 
-$existingResults = @()
-if (Test-Path $manifestPath) {
-  try {
-    $existingResults = Get-Content $manifestPath | ConvertFrom-Json
-  } catch {
-    Write-Warning "Failed to read existing manifest at $manifestPath; overwriting."
-  }
-}
+$existingResults = Read-JsonFileSafe -Path $manifestPath -SourceLabel "accel_manifest.json"
 
 $combined = @()
 if ($existingResults) {

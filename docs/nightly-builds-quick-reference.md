@@ -42,6 +42,7 @@ Look for files named: `ComfyUI_Windows_portable_cu130_nightly.7z.*`
 ✅ **Optional accelerator policy**
 - Missing wheels **must not fail** builds; they are gated with warnings.
 - Results are recorded in `builder-cu130/accel_manifest.json` and copied into the portable tree at `ComfyUI/user/default/accel_manifest.json`.
+- Manifest entries include the requested pattern/version, selected URL (if any), success, gate reason, and a stderr excerpt to aid debugging.
 - Launchers run `scripts/preflight_accel.py` to re-check availability and disable dependent custom nodes (e.g., `ComfyUI-nunchaku`, `ComfyUI-RadialAttn`) when required backends are missing.
 - Stage 2 packages the repo-root `scripts/` directory into the portable root to keep `preflight_accel.py` available; missing preflight scripts are logged and recorded in `accel_manifest.json`.
 
@@ -64,7 +65,7 @@ Look for files named: `ComfyUI_Windows_portable_cu130_nightly.7z.*`
 Automated via GitHub Actions:
 1. **Stage 1:** Install Python 3.13 + PyTorch nightly + bleeding-edge packages
 2. **Core attention stack:** `install_core_attention.ps1` (nightly only; gated)
-   - FlashAttention resolves PyPI binary-only first, then AI-windows-whl fallback; missing wheels are gated.
+   - FlashAttention resolves PyPI binary-only first, then the AI-windows-whl wheels.json resolver (validated wheel URLs + fallback templates; no index URLs).
 3. **Optional accelerators:** `install_optional_accel.ps1` (nightly only; gated, writes manifest)
 4. **xformers attempt:** `attempt_install_xformers.ps1` (nightly only; gated)
 5. **Stage 2:** Clone ComfyUI master + custom nodes + run CPU test + accelerator preflight
@@ -82,6 +83,9 @@ Warning: Failed to install [package] (may be incompatible with Python 3.13 / PyT
 This is expected. The build continues with available packages.
 
 PowerShell installer steps capture pip output defensively to avoid stream handling failures while still logging errors.
+
+**Do not reintroduce index URLs**
+- AI-windows-whl must be consumed via wheels.json + resolved wheel URLs only (no `-i/--index-url`, no `/simple` assumptions).
 
 ## Environment Toggles (Nightly)
 - `SKIP_CORE_ATTENTION=1` (used by workflow to defer core attention installs to PowerShell step)

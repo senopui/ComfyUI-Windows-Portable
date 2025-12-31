@@ -52,13 +52,61 @@ function Parse-JsonSafe {
   }
 }
 
+function Get-Excerpt {
+  param(
+    [string]$Text,
+    [int]$MaxLength = 400
+  )
+  if ([string]::IsNullOrWhiteSpace($Text)) {
+    return $null
+  }
+  $trimmed = $Text.Trim()
+  if ($trimmed.Length -le $MaxLength) {
+    return $trimmed
+  }
+  return $trimmed.Substring(0, $MaxLength)
+}
+
+function Read-JsonFileSafe {
+  param(
+    [string]$Path,
+    [string]$SourceLabel
+  )
+
+  if (-not (Test-Path $Path)) {
+    return @()
+  }
+
+  $raw = Get-Content -Raw $Path -ErrorAction SilentlyContinue
+  if ($null -eq $raw) {
+    return @()
+  }
+
+  $parsed = Parse-JsonSafe -RawOutput $raw -Source $SourceLabel
+  if (-not $parsed.ok) {
+    Write-Warning "Failed to parse $SourceLabel at $Path: $($parsed.reason)"
+    return @()
+  }
+  if ($parsed.data -is [System.Collections.IEnumerable] -and -not ($parsed.data -is [string])) {
+    return @($parsed.data)
+  }
+  return @($parsed.data)
+}
+
+$script:WheelIndexCache = @{}
+$script:FallbackWheelTemplates = @(
+  # Fallback URL templates: replace {0} with the wheel filename.
+  "https://github.com/wildminder/AI-windows-whl/releases/latest/download/{0}",
+  "https://github.com/wildminder/AI-windows-whl/releases/download/latest/{0}"
+)
+
 function Get-AIWindowsWheelIndex {
   param(
     [string]$IndexJsonUrl
   )
 
-  if ($script:AIWindowsWheelIndex -and $script:AIWindowsWheelIndex.Url -eq $IndexJsonUrl) {
-    return $script:AIWindowsWheelIndex.Data
+  if ($script:WheelIndexCache.ContainsKey($IndexJsonUrl)) {
+    return $script:WheelIndexCache[$IndexJsonUrl]
   }
 
   Write-Host "=== Fetching AI-windows-whl wheels.json from $IndexJsonUrl ==="
@@ -70,10 +118,7 @@ function Get-AIWindowsWheelIndex {
       Write-Warning "AI-windows-whl wheels.json invalid: $($parsed.reason)."
       return $null
     }
-    $script:AIWindowsWheelIndex = @{
-      Url = $IndexJsonUrl
-      Data = $parsed.data
-    }
+    $script:WheelIndexCache[$IndexJsonUrl] = $parsed.data
     return $parsed.data
   } catch {
     Write-Warning "Failed to query AI-windows-whl wheels.json: $($_.Exception.Message)"
@@ -142,10 +187,64 @@ print(json.dumps(info))
   return $parsed.data
 }
 
+function Get-PythonTag {
+  param(
+    [string]$PythonVersion
+  )
+  return switch ($PythonVersion) {
+    "3.13" { "cp313" }
+    "3.12" { "cp312" }
+    default { $null }
+  }
+}
+
+function Test-WheelUrlReachable {
+  param(
+    [string]$Url,
+    [int]$TimeoutSec = 20
+  )
+  try {
+    Invoke-WebRequest -Uri $Url -Method Head -UseBasicParsing -TimeoutSec $TimeoutSec | Out-Null
+    return [pscustomobject]@{ ok = $true; reason = $null }
+  } catch {
+    $headReason = $_.Exception.Message
+    try {
+      $headers = @{ Range = "bytes=0-0" }
+      Invoke-WebRequest -Uri $Url -Method Get -Headers $headers -UseBasicParsing -TimeoutSec $TimeoutSec | Out-Null
+      return [pscustomobject]@{ ok = $true; reason = $null }
+    } catch {
+      $getReason = $_.Exception.Message
+      return [pscustomobject]@{
+        ok = $false
+        reason = "HEAD failed: $headReason; GET failed: $getReason"
+      }
+    }
+  }
+}
+
+function Get-FallbackWheelUrls {
+  param(
+    [string]$WheelUrl
+  )
+  if (-not $WheelUrl) {
+    return @()
+  }
+  $filename = [IO.Path]::GetFileName($WheelUrl)
+  if (-not $filename) {
+    return @()
+  }
+  $fallbacks = @()
+  foreach ($template in $script:FallbackWheelTemplates) {
+    $fallbacks += ($template -f $filename)
+  }
+  return $fallbacks
+}
+
 function Resolve-AIWindowsWheelUrl {
   param(
     [string]$Python,
     [string]$PackagePattern,
+    [string]$PackageVersionPattern,
     [string]$IndexJsonUrl = "https://raw.githubusercontent.com/wildminder/AI-windows-whl/main/wheels.json",
     [string]$CudaTag = "cu130",
     [string]$PythonTag,
@@ -153,7 +252,13 @@ function Resolve-AIWindowsWheelUrl {
     [switch]$AllowAbi3,
     [pscustomobject]$TorchInfo
   )
-  Write-Host "=== Resolving AI-windows-whl wheel via wheels.json (pattern: $PackagePattern) ==="
+  $requested = if ($PackageVersionPattern) {
+    "{0} (version pattern: {1})" -f $PackagePattern, $PackageVersionPattern
+  } else {
+    $PackagePattern
+  }
+  Write-Host "=== Resolving AI-windows-whl wheel via wheels.json (pattern: $requested) ==="
+
   if (-not $TorchInfo) {
     $TorchInfo = Get-TorchInfoFromPython -Python $Python
   }
@@ -162,21 +267,19 @@ function Resolve-AIWindowsWheelUrl {
       url = $null
       reason = "torch metadata unavailable"
       source = "wheels-json"
+      requested = $requested
     }
   }
 
   if (-not $PythonTag) {
-    $PythonTag = switch ($TorchInfo.python_version) {
-      "3.13" { "cp313" }
-      "3.12" { "cp312" }
-      default { $null }
-    }
+    $PythonTag = Get-PythonTag -PythonVersion $TorchInfo.python_version
   }
   if (-not $PythonTag) {
     return [pscustomobject]@{
       url = $null
       reason = "unsupported python version $($TorchInfo.python_version)"
       source = "wheels-json"
+      requested = $requested
     }
   }
 
@@ -186,6 +289,7 @@ function Resolve-AIWindowsWheelUrl {
       url = $null
       reason = "wheels.json unavailable"
       source = "wheels-json"
+      requested = $requested
     }
   }
 
@@ -195,6 +299,7 @@ function Resolve-AIWindowsWheelUrl {
       url = $null
       reason = "no wheels.json package matched pattern '$PackagePattern'"
       source = "wheels-json"
+      requested = $requested
     }
   }
 
@@ -207,6 +312,13 @@ function Resolve-AIWindowsWheelUrl {
       }
       if ($url -notmatch "win_amd64") {
         continue
+      }
+
+      if ($PackageVersionPattern) {
+        $versionTarget = if ($wheel.package_version) { $wheel.package_version } else { "" }
+        if (-not ($versionTarget -match $PackageVersionPattern -or $url -match $PackageVersionPattern)) {
+          continue
+        }
       }
 
       $pythonScore = 0
@@ -275,14 +387,39 @@ function Resolve-AIWindowsWheelUrl {
       url = $null
       reason = $reason
       source = "wheels-json"
+      requested = $requested
     }
   }
 
   $sorted = $candidates | Sort-Object -Property python_score, dev_score, abi_score, parsed_version, url
   $selected = $sorted[-1]
+  $check = Test-WheelUrlReachable -Url $selected.url
+  if ($check.ok) {
+    return [pscustomobject]@{
+      url = $selected.url
+      reason = $null
+      source = "wheels-json"
+      requested = $requested
+    }
+  }
+
+  $fallbacks = Get-FallbackWheelUrls -WheelUrl $selected.url
+  foreach ($fallback in $fallbacks) {
+    $fallbackCheck = Test-WheelUrlReachable -Url $fallback
+    if ($fallbackCheck.ok) {
+      return [pscustomobject]@{
+        url = $fallback
+        reason = $null
+        source = "fallback-template"
+        requested = $requested
+      }
+    }
+  }
+
   return [pscustomobject]@{
-    url = $selected.url
-    reason = $null
+    url = $null
+    reason = "resolved wheel URL unreachable; fallback templates failed"
     source = "wheels-json"
+    requested = $requested
   }
 }

@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-. (Join-Path $PSScriptRoot "ai_windows_whl_resolver.ps1")
+. (Join-Path $PSScriptRoot "accel_helpers.ps1")
 
 function Test-SkipFlag {
   param(
@@ -20,12 +20,29 @@ function Invoke-PipInstall {
     [string[]]$Arguments
   )
   Write-Host "=== $Label ==="
-  $output = (& $Python -s -m pip @Arguments 2>&1 | Out-String).TrimEnd()
+  $stderrPath = [System.IO.Path]::GetTempFileName()
+  $output = ""
+  $stderr = ""
+  try {
+    $output = (& $Python -s -m pip @Arguments 2> $stderrPath | Out-String).TrimEnd()
+  } finally {
+    if (Test-Path $stderrPath) {
+      $stderrRaw = Get-Content -Raw $stderrPath -ErrorAction SilentlyContinue
+      if ($null -ne $stderrRaw) {
+        $stderr = $stderrRaw.Trim()
+      }
+      Remove-Item -Path $stderrPath -Force
+    }
+  }
+  if ($output) {
+    Write-Host $output
+  }
   $exitCode = $LASTEXITCODE
   return @{
     Success = ($exitCode -eq 0)
     ExitCode = $exitCode
-    Output = $output
+    Stdout = $output
+    Stderr = $stderr
     Version = $null
   }
 }
@@ -105,64 +122,6 @@ print(ver)
   }
 }
 
-function Get-TorchInfo {
-  param(
-    [string]$Python
-  )
-  $script = @"
-import json
-import sys
-import torch
-from packaging.version import Version, InvalidVersion
-
-ver = getattr(torch, "__version__", None)
-if not ver or not isinstance(ver, str):
-    sys.exit(1)
-base = ver.split("+", 1)[0]
-try:
-    parsed = Version(base)
-except InvalidVersion:
-    sys.exit(1)
-info = {
-    "torch_version": base,
-    "torch_major": parsed.major,
-    "torch_minor": parsed.minor,
-    "torch_is_dev": bool(parsed.is_devrelease),
-    "python_version": f"{sys.version_info.major}.{sys.version_info.minor}"
-}
-print(json.dumps(info))
-"@
-  $stderrPath = [System.IO.Path]::GetTempFileName()
-  $raw = ""
-  try {
-    $raw = (& $Python -W ignore -c $script 2> $stderrPath | Out-String).TrimEnd()
-  } finally {
-    if (Test-Path $stderrPath) {
-      $stderrRaw = Get-Content -Raw $stderrPath -ErrorAction SilentlyContinue
-      if ($null -eq $stderrRaw) {
-        $stderr = ""
-      } else {
-        $stderr = $stderrRaw.Trim()
-      }
-      Remove-Item -Path $stderrPath -Force
-    } else {
-      $stderr = ""
-    }
-  }
-  if ($LASTEXITCODE -ne 0 -or -not $raw) {
-    if ($stderr) {
-      Write-Warning "Torch metadata probe failed: $stderr"
-    }
-    return $null
-  }
-  $parsed = Parse-JsonSafe -RawOutput $raw -Source "Get-TorchInfo (python metadata)"
-  if (-not $parsed.ok) {
-    Write-Warning "Torch metadata JSON invalid: $($parsed.reason)."
-    return $null
-  }
-  return $parsed.data
-}
-
 function Invoke-TorchGuard {
   param(
     [string]$Python,
@@ -209,14 +168,10 @@ if (-not (Test-Path $python)) {
 }
 
 $aiWindowsWhlJson = "https://raw.githubusercontent.com/wildminder/AI-windows-whl/main/wheels.json"
-$torchInfo = Get-TorchInfo -Python $python
+$torchInfo = Get-TorchInfoFromPython -Python $python
 $pythonTag = $null
 if ($torchInfo) {
-  $pythonTag = switch ($torchInfo.python_version) {
-    "3.13" { "cp313" }
-    "3.12" { "cp312" }
-    default { $null }
-  }
+  $pythonTag = Get-PythonTag -PythonVersion $torchInfo.python_version
   if (-not $pythonTag) {
     Write-Warning "Unsupported python version $($torchInfo.python_version) for AI-windows-whl filtering."
   }
@@ -312,6 +267,8 @@ foreach ($package in $packages) {
   $version = $null
   $selectedUrl = $null
   $gateReason = $null
+  $stderrExcerpt = $null
+  $requestedSpec = "source_spec=$($package.SourceSpec); pattern=$($package.AiPattern)"
 
   $installAttempt = Invoke-PipInstall -Python $python -Label "Installing $($package.Name) from PyPI (binary-only)" -Arguments @("install", "--no-deps", "--only-binary", ":all:", $package.SourceSpec)
   if ($installAttempt.Success) {
@@ -319,21 +276,27 @@ foreach ($package in $packages) {
     $success = $true
     $errors = @()
     $selectedUrl = "none"
+    $stderrExcerpt = Get-Excerpt -Text $installAttempt.Stderr
   } else {
-    $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Output)"
+    $stderrExcerpt = Get-Excerpt -Text $installAttempt.Stderr
+    $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Stdout)"
   }
 
   if (-not $success) {
     $resolved = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern $package.AiPattern -IndexJsonUrl $aiWindowsWhlJson -TorchInfo $torchInfo -PythonTag $pythonTag -AllowAbi3
     if ($resolved.url) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing $($package.Name) from AI-windows-whl wheels.json" -Arguments @("install", "--no-deps", $resolved.url)
+      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing $($package.Name) from AI-windows-whl wheel URL" -Arguments @("install", "--no-deps", $resolved.url)
       if ($installAttempt.Success) {
         $source = $resolved.source
         $success = $true
         $errors = @()
         $selectedUrl = $resolved.url
+        if (-not $stderrExcerpt) {
+          $stderrExcerpt = Get-Excerpt -Text $installAttempt.Stderr
+        }
       } else {
-        $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Output)"
+        $stderrExcerpt = Get-Excerpt -Text $installAttempt.Stderr
+        $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Stdout)"
       }
     } else {
       $gateReason = if ($resolved.reason) { $resolved.reason } else { "AI-windows-whl wheel unavailable" }
@@ -349,8 +312,12 @@ foreach ($package in $packages) {
         $success = $true
         $errors = @()
         $selectedUrl = "none"
+        if (-not $stderrExcerpt) {
+          $stderrExcerpt = Get-Excerpt -Text $installAttempt.Stderr
+        }
       } else {
-        $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Output)"
+        $stderrExcerpt = Get-Excerpt -Text $installAttempt.Stderr
+        $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Stdout)"
       }
     } else {
       $errors += $package.SourceReason
@@ -387,6 +354,7 @@ foreach ($package in $packages) {
 
   $results += [pscustomobject]@{
     name = $package.Name
+    requested = $requestedSpec
     version = $version
     source = $source
     success = $success
@@ -394,6 +362,7 @@ foreach ($package in $packages) {
     url = if ($selectedUrl) { $selectedUrl } else { "none" }
     gate_reason = $gateReason
     error_if_any = $errorMessage
+    stderr_excerpt = $stderrExcerpt
   }
 
   if (-not $success) {
