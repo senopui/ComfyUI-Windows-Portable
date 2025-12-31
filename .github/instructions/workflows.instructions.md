@@ -2,6 +2,8 @@
 applyTo: ".github/workflows/**"
 ---
 
+Always follow AGENTS.md guidance (root + scoped AGENTS.md).
+
 # GitHub Actions workflows (.github/workflows/**)
 
 ## Workflow norms

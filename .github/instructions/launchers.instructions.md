@@ -2,6 +2,8 @@
 applyTo: "**/*.bat"
 ---
 
+Always follow AGENTS.md guidance (root + scoped AGENTS.md).
+
 # Launcher batch files (batch launchers)
 
 ## Workflow norms

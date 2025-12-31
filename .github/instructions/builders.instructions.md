@@ -2,6 +2,8 @@
 applyTo: "builder*/**"
 ---
 
+Always follow AGENTS.md guidance (root + scoped AGENTS.md).
+
 # Builder scripts (builder*/)
 
 ## Workflow norms
