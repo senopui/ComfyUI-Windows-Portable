@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "ai_windows_whl_resolver.ps1")
+
 function Test-SkipFlag {
   param(
     [string]$Value
@@ -38,60 +40,6 @@ function Get-PackageVersion {
     return $null
   }
   return $version
-}
-
-function Parse-JsonSafe {
-  param(
-    [Parameter(Mandatory = $true)]
-    $RawOutput,
-    [string]$Source
-  )
-
-  $rawString = if ($RawOutput -is [string]) {
-    $RawOutput
-  } else {
-    [string]::Join("`n", $RawOutput)
-  }
-  $trimmed = ($rawString -replace "^\uFEFF", "").Trim()
-  $preview = if ($trimmed.Length -gt 200) { $trimmed.Substring(0, 200) } else { $trimmed }
-
-  if (-not $trimmed) {
-    Write-Warning "JSON parse skipped for ${Source}: empty response."
-    return [pscustomobject]@{
-      ok = $false
-      reason = "empty response"
-      raw_preview = $preview
-      source = $Source
-    }
-  }
-
-  if (-not ($trimmed.StartsWith("{") -or $trimmed.StartsWith("["))) {
-    $reason = if ($trimmed.StartsWith("<")) { "HTML response detected" } else { "non-JSON output detected" }
-    Write-Warning "JSON parse skipped for ${Source}: $reason."
-    return [pscustomobject]@{
-      ok = $false
-      reason = $reason
-      raw_preview = $preview
-      source = $Source
-    }
-  }
-
-  try {
-    $parsed = $trimmed | ConvertFrom-Json
-    return [pscustomobject]@{
-      ok = $true
-      data = $parsed
-      source = $Source
-    }
-  } catch {
-    Write-Warning "JSON parse failed for ${Source}: $($_.Exception.Message)"
-    return [pscustomobject]@{
-      ok = $false
-      reason = "ConvertFrom-Json failed: $($_.Exception.Message)"
-      raw_preview = $preview
-      source = $Source
-    }
-  }
 }
 
 function Test-PackageImport {
@@ -244,145 +192,6 @@ function Invoke-TorchGuard {
   }
 }
 
-function Resolve-WildminderWheelUrl {
-  param(
-    [string]$Python,
-    [string]$PackagePattern,
-    [string]$IndexJsonUrl,
-    [pscustomobject]$TorchInfo,
-    [string]$PythonTag
-  )
-  Write-Host "=== Resolving AI-windows-whl wheel from $IndexJsonUrl (pattern: $PackagePattern) ==="
-  if (-not $TorchInfo) {
-    Write-Warning "Torch info unavailable; skipping Wildminder resolver."
-    return $null
-  }
-  try {
-    $page = Invoke-WebRequest -Uri $IndexJsonUrl -UseBasicParsing
-    $payloadRaw = ($page.Content 2>&1 | Out-String).TrimEnd()
-    $parsed = Parse-JsonSafe -RawOutput $payloadRaw -Source "Resolve-WildminderWheelUrl $IndexJsonUrl"
-    if (-not $parsed.ok) {
-      Write-Warning "Wildminder index JSON invalid: $($parsed.reason)."
-      return $null
-    }
-    $payload = $parsed.data
-    $packages = @($payload.packages | Where-Object { $_.id -match $PackagePattern -or $_.name -match $PackagePattern })
-    if ($packages.Count -eq 0) {
-      Write-Warning "No Wildminder package entries matched pattern '$PackagePattern'"
-      return $null
-    }
-
-    $pythonVersion = $TorchInfo.python_version
-    $torchMajor = $TorchInfo.torch_major
-    $torchMinor = $TorchInfo.torch_minor
-    $torchIsDev = [bool]$TorchInfo.torch_is_dev
-
-    $candidates = @()
-    foreach ($pkg in $packages) {
-      foreach ($wheel in @($pkg.wheels)) {
-        if (-not $wheel.url) {
-          continue
-        }
-        if ($wheel.python_version -ne $pythonVersion) {
-          continue
-        }
-        if ($wheel.url -notmatch "win_amd64") {
-          continue
-        }
-        if ($PythonTag -and ($wheel.url -notmatch $PythonTag)) {
-          continue
-        }
-        $cudaNorm = ($wheel.cuda_version -replace "\.", "")
-        if ($cudaNorm -ne "130") {
-          continue
-        }
-        $torchVersion = $wheel.torch_version
-        if (-not ($torchVersion -match "^$torchMajor\\.$torchMinor")) {
-          continue
-        }
-        if ($torchIsDev -and ($torchVersion -notmatch "dev")) {
-          continue
-        }
-        if (-not $torchIsDev -and ($torchVersion -match "dev")) {
-          continue
-        }
-        $candidates += [pscustomobject]@{
-          url = $wheel.url
-          package_version = $wheel.package_version
-          torch_version = $torchVersion
-        }
-      }
-    }
-
-    if ($candidates.Count -eq 0) {
-      Write-Warning "No Wildminder wheels matched python $pythonVersion, $PythonTag, cu130, torch $torchMajor.$torchMinor."
-      return $null
-    }
-
-    $sorted = $candidates | Sort-Object -Property @{Expression = { [version]$_.package_version }}, @{Expression = { $_.torch_version }}, @{Expression = { $_.url } }
-    return $sorted[-1].url
-  } catch {
-    Write-Warning "Failed to query Wildminder AI-windows-whl index: $($_.Exception.Message)"
-  }
-  return $null
-}
-
-function Resolve-AIWindowsWheelUrlFromIndex {
-  param(
-    [string]$Python,
-    [string]$PackagePattern,
-    [string]$IndexUrl
-  )
-  Write-Host "=== Resolving AI-windows-whl wheel from $IndexUrl (pattern: $PackagePattern) ==="
-  try {
-    $page = Invoke-WebRequest -Uri $IndexUrl -UseBasicParsing
-    $links = [regex]::Matches($page.Content, 'href="([^"]+\.whl)"') | ForEach-Object { $_.Groups[1].Value }
-    $matches = $links | Where-Object { $_ -match $PackagePattern }
-    if ($matches.Count -gt 0) {
-      $payload = ($matches | ConvertTo-Json -Compress)
-      $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($payload))
-      $script = @"
-import base64
-import json
-from packaging.tags import sys_tags
-from packaging.utils import parse_wheel_filename
-
-links = json.loads(base64.b64decode("$encoded"))
-tag_set = {str(tag) for tag in sys_tags()}
-compatible = []
-for link in links:
-    filename = link.rsplit("/", 1)[-1]
-    try:
-        _, _, _, wheel_tags = parse_wheel_filename(filename)
-    except Exception:
-        continue
-    if any(str(tag) in tag_set for tag in wheel_tags):
-        compatible.append(link)
-
-print("\n".join(compatible))
-"@
-      $filtered = (& $Python -c $script 2>&1 | Out-String).TrimEnd()
-      if ($LASTEXITCODE -eq 0 -and $filtered) {
-        $matches = $filtered -split "`r?`n"
-      } elseif ($LASTEXITCODE -ne 0) {
-        Write-Warning "Failed to filter AI-windows-whl wheels by tag; falling back to unfiltered list."
-      }
-    }
-    $matches = $matches | Sort-Object
-    if ($matches.Count -gt 0) {
-      $candidate = $matches[-1]
-      if ($candidate -match '^https?://') {
-        return $candidate
-      }
-      return "$IndexUrl$candidate"
-    }
-    Write-Warning "No wheel links matched pattern '$PackagePattern'"
-  } catch {
-    Write-Warning "Failed to query AI-windows-whl index: $($_.Exception.Message)"
-  }
-  return $null
-}
-
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $python = Join-Path $root "python_standalone/python.exe"
 $manifestPath = Join-Path $root "accel_manifest.json"
@@ -400,7 +209,6 @@ if (-not (Test-Path $python)) {
 }
 
 $aiWindowsWhlJson = "https://raw.githubusercontent.com/wildminder/AI-windows-whl/main/wheels.json"
-$aiWindowsIndex = "https://ai-windows-whl.github.io/whl/"
 $torchInfo = Get-TorchInfo -Python $python
 $pythonTag = $null
 if ($torchInfo) {
@@ -490,6 +298,8 @@ if ($sageattention2ppSpec) {
     version = $null
     source = "unsupported"
     success = $false
+    url = "none"
+    gate_reason = "unsupported (SAGEATTENTION2PP_PACKAGE not set)"
     error_if_any = "unsupported (SAGEATTENTION2PP_PACKAGE not set)"
   }
   Write-Warning "GATED: sageattention2pp unsupported (SAGEATTENTION2PP_PACKAGE not set)"
@@ -500,45 +310,34 @@ foreach ($package in $packages) {
   $source = "none"
   $errors = @()
   $version = $null
+  $selectedUrl = $null
+  $gateReason = $null
 
   $installAttempt = Invoke-PipInstall -Python $python -Label "Installing $($package.Name) from PyPI (binary-only)" -Arguments @("install", "--no-deps", "--only-binary", ":all:", $package.SourceSpec)
   if ($installAttempt.Success) {
     $source = "pypi"
     $success = $true
     $errors = @()
+    $selectedUrl = "none"
   } else {
     $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Output)"
   }
 
   if (-not $success) {
-    $wildminderUrl = Resolve-WildminderWheelUrl -Python $python -PackagePattern $package.AiPattern -IndexJsonUrl $aiWindowsWhlJson -TorchInfo $torchInfo -PythonTag $pythonTag
-    if ($wildminderUrl) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing $($package.Name) from Wildminder AI-windows-whl" -Arguments @("install", "--no-deps", $wildminderUrl)
+    $resolved = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern $package.AiPattern -IndexJsonUrl $aiWindowsWhlJson -TorchInfo $torchInfo -PythonTag $pythonTag -AllowAbi3
+    if ($resolved.url) {
+      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing $($package.Name) from AI-windows-whl wheels.json" -Arguments @("install", "--no-deps", $resolved.url)
       if ($installAttempt.Success) {
-        $source = "wildminder-ai-windows-whl"
+        $source = $resolved.source
         $success = $true
         $errors = @()
+        $selectedUrl = $resolved.url
       } else {
         $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Output)"
       }
     } else {
-      $errors += "Wildminder AI-windows-whl wheel unavailable"
-    }
-  }
-
-  if (-not $success) {
-    $aiUrl = Resolve-AIWindowsWheelUrlFromIndex -Python $python -PackagePattern $package.AiPattern -IndexUrl $aiWindowsIndex
-    if ($aiUrl) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing $($package.Name) from AI-windows-whl index" -Arguments @("install", "--no-deps", $aiUrl)
-      if ($installAttempt.Success) {
-        $source = "ai-windows-whl-index"
-        $success = $true
-        $errors = @()
-      } else {
-        $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Output)"
-      }
-    } else {
-      $errors += "AI-windows-whl index wheel unavailable"
+      $gateReason = if ($resolved.reason) { $resolved.reason } else { "AI-windows-whl wheel unavailable" }
+      $errors += $gateReason
     }
   }
 
@@ -549,6 +348,7 @@ foreach ($package in $packages) {
         $source = "source"
         $success = $true
         $errors = @()
+        $selectedUrl = "none"
       } else {
         $errors += "pip exit $($installAttempt.ExitCode): $($installAttempt.Output)"
       }
@@ -581,6 +381,9 @@ foreach ($package in $packages) {
   }
 
   $errorMessage = if ($errors.Count -gt 0) { ($errors -join " | ") } else { $null }
+  if (-not $success -and -not $gateReason) {
+    $gateReason = $errorMessage
+  }
 
   $results += [pscustomobject]@{
     name = $package.Name
@@ -588,6 +391,8 @@ foreach ($package in $packages) {
     source = $source
     success = $success
     gated = (-not $success)
+    url = if ($selectedUrl) { $selectedUrl } else { "none" }
+    gate_reason = $gateReason
     error_if_any = $errorMessage
   }
 

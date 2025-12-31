@@ -122,39 +122,23 @@ is_skip_flag() {
 if is_skip_flag "${SKIP_CORE_ATTENTION:-}"; then
     echo "=== Skipping core attention installs in stage1 (managed separately) ==="
 else
-    # Guarded install: flash-attn via AI-windows-whl (binary-only, no source builds)
-    # flash-attn requires torch to be installed first (imports torch during build)
-    # Use --only-binary to prevent PEP517 source builds which fail without torch in isolation
-    echo "=== Attempting flash-attn from AI-windows-whl ==="
-    $pip_exe install flash-attn --no-deps --only-binary :all: --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: flash-attn binary wheel not available for cp313/torch-nightly, source build prevented (skipping)"
+    echo "=== Core attention installs handled by install_core_attention.ps1 ==="
 fi
 
 verify_torch_or_restore "core attention install group"
 
 if ! is_skip_flag "${SKIP_CORE_ATTENTION:-}"; then
-    # Guarded install: sageattention via AI-windows-whl
-    echo "=== Attempting sageattention from AI-windows-whl ==="
-    $pip_exe install sageattention --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: sageattention binary wheel not available for this Python+PyTorch+CUDA combination"
-
-    # Guarded install: triton-windows via AI-windows-whl
-    echo "=== Attempting triton-windows from AI-windows-whl ==="
-    $pip_exe install 'triton-windows<3.6' --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: triton-windows binary wheel not available for this Python+PyTorch+CUDA combination"
+    echo "=== Core attention components handled by install_core_attention.ps1 ==="
 fi
 
 # Guarded install: natten via whl.natten.org
 echo "=== Attempting natten from whl.natten.org ==="
 $pip_exe install natten --no-deps -f https://whl.natten.org || echo "WARNING: natten binary wheel not available for this Python+PyTorch+CUDA combination"
 
-# Guarded install: nunchaku via AI-windows-whl
-echo "=== Attempting nunchaku from AI-windows-whl ==="
-$pip_exe install nunchaku --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: nunchaku binary wheel not available for this Python+PyTorch+CUDA combination"
-
-# Guarded install: spargeattention via AI-windows-whl
 if is_skip_flag "${SKIP_SPARGEATTN:-}"; then
     echo "=== Skipping spargeattention install (managed separately) ==="
 else
-    echo "=== Attempting spargeattention from AI-windows-whl ==="
-    $pip_exe install spargeattention --no-deps --extra-index-url https://ai-windows-whl.github.io/whl/ || echo "WARNING: spargeattention binary wheel not available for this Python+PyTorch+CUDA combination"
+    echo "=== SpargeAttn installs handled by install_optional_accel.ps1 ==="
 fi
 
 # Guarded install: bitsandbytes
