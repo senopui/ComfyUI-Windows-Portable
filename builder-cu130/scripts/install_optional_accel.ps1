@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "ai_windows_whl_resolver.ps1")
+
 function Invoke-PipInstall {
   param(
     [string]$Python,
@@ -183,35 +185,6 @@ print("\n".join(compatible))
   return $filtered -split "`r?`n"
 }
 
-function Resolve-AIWindowsWheelUrl {
-  param(
-    [string]$Python,
-    [string]$PackagePattern,
-    [string]$IndexUrl
-  )
-  Write-Host "=== Resolving AI-windows-whl wheel from $IndexUrl (pattern: $PackagePattern) ==="
-  try {
-    $page = Invoke-WebRequest -Uri $IndexUrl -UseBasicParsing
-    $links = [regex]::Matches($page.Content, 'href="([^"]+\.whl)"') | ForEach-Object { $_.Groups[1].Value }
-    $matches = $links | Where-Object { $_ -match $PackagePattern }
-    if ($matches.Count -gt 0) {
-      $matches = Filter-CompatibleWheelUrls -Python $Python -Urls $matches
-    }
-    $matches = $matches | Sort-Object
-    if ($matches.Count -gt 0) {
-      $candidate = $matches[-1]
-      if ($candidate -match '^https?://') {
-        return $candidate
-      }
-      return "$IndexUrl$candidate"
-    }
-    Write-Warning "No wheel links matched pattern '$PackagePattern'"
-  } catch {
-    Write-Warning "Failed to query AI-windows-whl index: $($_.Exception.Message)"
-  }
-  return $null
-}
-
 function Resolve-GitHubReleaseWheelUrl {
   param(
     [string]$Python,
@@ -241,52 +214,6 @@ function Resolve-GitHubReleaseWheelUrl {
   return $null
 }
 
-function Resolve-WildminderWheelUrl {
-  param(
-    [string]$Python,
-    [string]$PackageId,
-    [string]$PythonTag,
-    [string]$CudaTag
-  )
-  $wheelIndexUrl = "https://raw.githubusercontent.com/wildminder/AI-windows-whl/main/wheels.json"
-  Write-Host "=== Resolving wheels.json entry for $PackageId ($wheelIndexUrl) ==="
-  try {
-    $data = Invoke-RestMethod -Uri $wheelIndexUrl -UseBasicParsing
-    $package = $data.packages | Where-Object { $_.id -eq $PackageId } | Select-Object -First 1
-    if (-not $package) {
-      Write-Warning "Package '$PackageId' not found in wheels.json"
-      return $null
-    }
-    $wheels = @($package.wheels)
-    if (-not $wheels -or $wheels.Count -eq 0) {
-      Write-Warning "No wheels listed for '$PackageId' in wheels.json"
-      return $null
-    }
-    $matching = $wheels | Where-Object {
-      $url = $_.url
-      $pythonMatch = ($_.python_version -eq "3.13") -or ($url -match $PythonTag)
-      $cudaMatch = ($_.cuda_version -eq "13.0") -or ($_.cuda_version -eq "13") -or ($url -match $CudaTag)
-      $torchMatch = ($_.torch_version -match "dev|nightly") -or ($url -match "torch.*dev") -or ($url -match "torch.*nightly")
-      $pythonMatch -and $cudaMatch -and $torchMatch -and $url
-    }
-    if (-not $matching -or $matching.Count -eq 0) {
-      Write-Warning "No wheels matched cp313/torch-nightly/cu130 in wheels.json for $PackageId"
-      return $null
-    }
-    $urls = $matching | ForEach-Object { $_.url } | Where-Object { $_ }
-    $filtered = Filter-CompatibleWheelUrls -Python $Python -Urls $urls
-    if ($filtered.Count -eq 0) {
-      Write-Warning "No compatible wheels found in wheels.json for $PackageId"
-      return $null
-    }
-    $filtered = $filtered | Sort-Object
-    return $filtered[-1]
-  } catch {
-    Write-Warning "Failed to query wheels.json: $($_.Exception.Message)"
-  }
-  return $null
-}
-
 function Set-AvailabilityFlag {
   param(
     [string]$Name,
@@ -309,6 +236,16 @@ if (-not (Test-Path $python)) {
   throw "Python executable not found at $python"
 }
 
+$torchInfo = Get-TorchInfoFromPython -Python $python
+$pythonTag = $null
+if ($torchInfo) {
+  $pythonTag = switch ($torchInfo.python_version) {
+    "3.13" { "cp313" }
+    "3.12" { "cp312" }
+    default { $null }
+  }
+}
+
 $results = @()
 
 function Add-Result {
@@ -317,6 +254,8 @@ function Add-Result {
     [string]$Version,
     [string]$Source,
     [bool]$Success,
+    [string]$Url,
+    [string]$GateReason,
     [string]$ErrorMessage
   )
   $script:results += [pscustomobject]@{
@@ -324,6 +263,8 @@ function Add-Result {
     version = $Version
     source = $Source
     success = $Success
+    url = if ($Url) { $Url } else { "none" }
+    gate_reason = $GateReason
     error_if_any = $ErrorMessage
   }
 }
@@ -335,6 +276,8 @@ try {
   $nunchakuSource = "none"
   $nunchakuVersion = Get-PackageVersion -Python $python -PackageName "nunchaku"
   $nunchakuSuccess = $false
+  $nunchakuUrl = "none"
+  $nunchakuGateReason = $null
 
   if ($nunchakuVersion) {
     if (Test-VersionAtLeast -Python $python -Version $nunchakuVersion -Minimum $nunchakuMinVersion) {
@@ -353,6 +296,7 @@ try {
         $nunchakuSource = "github-release"
         $nunchakuSuccess = $true
         $nunchakuErrors = @()
+        $nunchakuUrl = $ghUrl
       } else {
         $nunchakuErrors += $installAttempt.Error
       }
@@ -362,18 +306,20 @@ try {
   }
 
   if (-not $nunchakuSuccess) {
-    $aiUrl = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "nunchaku" -IndexUrl "https://ai-windows-whl.github.io/whl/"
-    if ($aiUrl) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing nunchaku from AI-windows-whl" -Arguments @("install", "--no-deps", "--force-reinstall", $aiUrl)
+    $resolved = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "nunchaku" -TorchInfo $torchInfo -PythonTag $pythonTag -AllowAbi3
+    if ($resolved.url) {
+      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing nunchaku from AI-windows-whl wheels.json" -Arguments @("install", "--no-deps", "--force-reinstall", $resolved.url)
       if ($installAttempt.Success) {
-        $nunchakuSource = "ai-windows-whl"
+        $nunchakuSource = $resolved.source
         $nunchakuSuccess = $true
         $nunchakuErrors = @()
+        $nunchakuUrl = $resolved.url
       } else {
         $nunchakuErrors += $installAttempt.Error
       }
     } else {
-      $nunchakuErrors += "AI-windows-whl wheel unavailable"
+      $nunchakuGateReason = if ($resolved.reason) { $resolved.reason } else { "wheels.json wheel unavailable" }
+      $nunchakuErrors += $nunchakuGateReason
     }
   }
 
@@ -409,8 +355,11 @@ try {
     Set-AvailabilityFlag -Name "NUNCHAKU_AVAILABLE" -Value "0"
     $nunchakuErrorMessage = if ($nunchakuErrors.Count -gt 0) { ($nunchakuErrors -join " | ") } else { "Unknown failure" }
     Write-Warning "GATED: nunchaku not available ($nunchakuErrorMessage)"
+    if (-not $nunchakuGateReason) {
+      $nunchakuGateReason = $nunchakuErrorMessage
+    }
   }
-  Add-Result -Name "nunchaku" -Version $nunchakuVersion -Source $nunchakuSource -Success $nunchakuSuccess -ErrorMessage (if ($nunchakuErrors.Count -gt 0) { $nunchakuErrors -join " | " } else { $null })
+  Add-Result -Name "nunchaku" -Version $nunchakuVersion -Source $nunchakuSource -Success $nunchakuSuccess -Url $nunchakuUrl -GateReason $nunchakuGateReason -ErrorMessage (if ($nunchakuErrors.Count -gt 0) { $nunchakuErrors -join " | " } else { $null })
   Invoke-TorchGuard -Python $python -Root $root -Label "nunchaku install group"
 
   # SpargeAttn (spas_sage_attn / sparse_sageattn)
@@ -420,6 +369,8 @@ try {
   $spargeSuccess = $false
   $spargeTorchReady = $true
   $spargePackageInfo = Get-FirstPackageVersion -Python $python -PackageNames @("spas_sage_attn", "sparse_sageattn")
+  $spargeUrl = "none"
+  $spargeGateReason = $null
 
   if ($spargePackageInfo) {
     $spargeSuccess = $true
@@ -441,6 +392,7 @@ try {
           $spargeSource = "github-release"
           $spargeSuccess = $true
           $spargeErrors = @()
+          $spargeUrl = $ghUrl
         } else {
           $spargeErrors += $installAttempt.Error
         }
@@ -520,34 +472,20 @@ try {
   }
 
   if (-not $spargeSuccess -and $spargeNightlyEnabled -and $spargeTorchReady) {
-    $wildminderUrl = Resolve-WildminderWheelUrl -Python $python -PackageId "spargeattn" -PythonTag "cp313" -CudaTag "cu130"
-    if ($wildminderUrl) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from wheels.json" -Arguments @("install", "--no-deps", "--force-reinstall", $wildminderUrl)
+    $resolved = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "spargeattn" -TorchInfo $torchInfo -PythonTag $pythonTag -AllowAbi3
+    if ($resolved.url) {
+      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from wheels.json" -Arguments @("install", "--no-deps", "--force-reinstall", $resolved.url)
       if ($installAttempt.Success) {
-        $spargeSource = "wheels-json"
+        $spargeSource = $resolved.source
         $spargeSuccess = $true
         $spargeErrors = @()
+        $spargeUrl = $resolved.url
       } else {
         $spargeErrors += $installAttempt.Error
       }
     } else {
-      $spargeErrors += "wheels.json wheel unavailable"
-    }
-  }
-
-  if (-not $spargeSuccess -and $spargeTorchReady) {
-    $aiUrl = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "(spas|sparse).*sage.*attn" -IndexUrl "https://ai-windows-whl.github.io/whl/"
-    if ($aiUrl) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing SpargeAttn from AI-windows-whl" -Arguments @("install", "--no-deps", "--force-reinstall", $aiUrl)
-      if ($installAttempt.Success) {
-        $spargeSource = "ai-windows-whl"
-        $spargeSuccess = $true
-        $spargeErrors = @()
-      } else {
-        $spargeErrors += $installAttempt.Error
-      }
-    } else {
-      $spargeErrors += "AI-windows-whl wheel unavailable"
+      $spargeGateReason = if ($resolved.reason) { $resolved.reason } else { "wheels.json wheel unavailable" }
+      $spargeErrors += $spargeGateReason
     }
   }
 
@@ -580,8 +518,11 @@ try {
     Set-AvailabilityFlag -Name "SPARGEATTN_AVAILABLE" -Value "0"
     $spargeErrorMessage = if ($spargeErrors.Count -gt 0) { ($spargeErrors -join " | ") } else { "Unknown failure" }
     Write-Warning "GATED: SpargeAttn not available ($spargeErrorMessage)"
+    if (-not $spargeGateReason) {
+      $spargeGateReason = $spargeErrorMessage
+    }
   }
-  Add-Result -Name "spargeattn" -Version $spargeVersion -Source $spargeSource -Success $spargeSuccess -ErrorMessage (if ($spargeErrors.Count -gt 0) { $spargeErrors -join " | " } else { $null })
+  Add-Result -Name "spargeattn" -Version $spargeVersion -Source $spargeSource -Success $spargeSuccess -Url $spargeUrl -GateReason $spargeGateReason -ErrorMessage (if ($spargeErrors.Count -gt 0) { $spargeErrors -join " | " } else { $null })
   Invoke-TorchGuard -Python $python -Root $root -Label "spargeattn install group"
 
   # NATTEN
@@ -589,6 +530,8 @@ try {
   $nattenSource = "none"
   $nattenVersion = Get-PackageVersion -Python $python -PackageName "natten"
   $nattenSuccess = $false
+  $nattenUrl = "none"
+  $nattenGateReason = $null
 
   if ($nattenVersion) {
     $nattenSuccess = $true
@@ -607,18 +550,20 @@ try {
   }
 
   if (-not $nattenSuccess) {
-    $aiUrl = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "natten" -IndexUrl "https://ai-windows-whl.github.io/whl/"
-    if ($aiUrl) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing natten from AI-windows-whl" -Arguments @("install", "--no-deps", "--force-reinstall", $aiUrl)
+    $resolved = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "natten" -TorchInfo $torchInfo -PythonTag $pythonTag -AllowAbi3
+    if ($resolved.url) {
+      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing natten from AI-windows-whl wheels.json" -Arguments @("install", "--no-deps", "--force-reinstall", $resolved.url)
       if ($installAttempt.Success) {
-        $nattenSource = "ai-windows-whl"
+        $nattenSource = $resolved.source
         $nattenSuccess = $true
         $nattenErrors = @()
+        $nattenUrl = $resolved.url
       } else {
         $nattenErrors += $installAttempt.Error
       }
     } else {
-      $nattenErrors += "AI-windows-whl wheel unavailable"
+      $nattenGateReason = if ($resolved.reason) { $resolved.reason } else { "wheels.json wheel unavailable" }
+      $nattenErrors += $nattenGateReason
     }
   }
 
@@ -650,8 +595,11 @@ try {
     Set-AvailabilityFlag -Name "NATTEN_AVAILABLE" -Value "0"
     $nattenErrorMessage = if ($nattenErrors.Count -gt 0) { ($nattenErrors -join " | ") } else { "Unknown failure" }
     Write-Warning "GATED: natten not available ($nattenErrorMessage)"
+    if (-not $nattenGateReason) {
+      $nattenGateReason = $nattenErrorMessage
+    }
   }
-  Add-Result -Name "natten" -Version $nattenVersion -Source $nattenSource -Success $nattenSuccess -ErrorMessage (if ($nattenErrors.Count -gt 0) { $nattenErrors -join " | " } else { $null })
+  Add-Result -Name "natten" -Version $nattenVersion -Source $nattenSource -Success $nattenSuccess -Url $nattenUrl -GateReason $nattenGateReason -ErrorMessage (if ($nattenErrors.Count -gt 0) { $nattenErrors -join " | " } else { $null })
   Invoke-TorchGuard -Python $python -Root $root -Label "natten install group"
 
   # bitsandbytes
@@ -659,6 +607,8 @@ try {
   $bnbSource = "none"
   $bnbVersion = Get-PackageVersion -Python $python -PackageName "bitsandbytes"
   $bnbSuccess = $false
+  $bnbUrl = "none"
+  $bnbGateReason = $null
 
   if ($bnbVersion) {
     $bnbSuccess = $true
@@ -677,18 +627,20 @@ try {
   }
 
   if (-not $bnbSuccess) {
-    $aiUrl = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "bitsandbytes" -IndexUrl "https://ai-windows-whl.github.io/whl/"
-    if ($aiUrl) {
-      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing bitsandbytes from AI-windows-whl" -Arguments @("install", "--no-deps", "--force-reinstall", $aiUrl)
+    $resolved = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "bitsandbytes" -TorchInfo $torchInfo -PythonTag $pythonTag -AllowAbi3
+    if ($resolved.url) {
+      $installAttempt = Invoke-PipInstall -Python $python -Label "Installing bitsandbytes from AI-windows-whl wheels.json" -Arguments @("install", "--no-deps", "--force-reinstall", $resolved.url)
       if ($installAttempt.Success) {
-        $bnbSource = "ai-windows-whl"
+        $bnbSource = $resolved.source
         $bnbSuccess = $true
         $bnbErrors = @()
+        $bnbUrl = $resolved.url
       } else {
         $bnbErrors += $installAttempt.Error
       }
     } else {
-      $bnbErrors += "AI-windows-whl wheel unavailable"
+      $bnbGateReason = if ($resolved.reason) { $resolved.reason } else { "wheels.json wheel unavailable" }
+      $bnbErrors += $bnbGateReason
     }
   }
 
@@ -720,8 +672,11 @@ try {
     Set-AvailabilityFlag -Name "BITSANDBYTES_AVAILABLE" -Value "0"
     $bnbErrorMessage = if ($bnbErrors.Count -gt 0) { ($bnbErrors -join " | ") } else { "Unknown failure" }
     Write-Warning "GATED: bitsandbytes not available ($bnbErrorMessage)"
+    if (-not $bnbGateReason) {
+      $bnbGateReason = $bnbErrorMessage
+    }
   }
-  Add-Result -Name "bitsandbytes" -Version $bnbVersion -Source $bnbSource -Success $bnbSuccess -ErrorMessage (if ($bnbErrors.Count -gt 0) { $bnbErrors -join " | " } else { $null })
+  Add-Result -Name "bitsandbytes" -Version $bnbVersion -Source $bnbSource -Success $bnbSuccess -Url $bnbUrl -GateReason $bnbGateReason -ErrorMessage (if ($bnbErrors.Count -gt 0) { $bnbErrors -join " | " } else { $null })
   Invoke-TorchGuard -Python $python -Root $root -Label "bitsandbytes install group"
 } catch {
   Write-Warning "Optional accelerator install encountered an unexpected error: $($_.Exception.Message)"

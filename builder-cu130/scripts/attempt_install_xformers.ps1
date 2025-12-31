@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "ai_windows_whl_resolver.ps1")
+
 function Write-EnvValue {
   param(
     [string]$Name,
@@ -18,31 +20,6 @@ function Get-TorchVersion {
     throw "Unable to read torch version."
   }
   return $version.Trim()
-}
-
-function Get-TorchInfo {
-  param([string]$Python)
-  $script = @"
-import json
-import torch
-
-ver = getattr(torch, "__version__", "")
-cuda = torch.version.cuda or ""
-base = ver.split("+", 1)[0] if ver else ""
-cuda_tag = f"cu{cuda.replace('.', '')}" if cuda else ""
-print(json.dumps({
-    "version": ver,
-    "base": base,
-    "cuda": cuda,
-    "cuda_tag": cuda_tag
-}))
-"@
-  $payload = & $Python -c $script 2>&1
-  if ($LASTEXITCODE -ne 0) {
-    Write-Warning "Unable to read torch metadata ($payload)"
-    return $null
-  }
-  return $payload.Trim() | ConvertFrom-Json
 }
 
 function Test-TorchNightlyCu130 {
@@ -223,14 +200,14 @@ if ($LASTEXITCODE -ne 0) {
   exit 0
 }
 
-$torchInfo = Get-TorchInfo -Python $python
+$torchInfo = Get-TorchInfoFromPython -Python $python
 if (-not $torchInfo) {
   Write-Warning "Unable to read torch metadata; skipping xformers attempt."
   Write-EnvValue -Name "XFORMERS_AVAILABLE" -Value "0"
   exit 0
 }
 
-$torchBase = $torchInfo.base
+$torchBase = $torchInfo.torch_version
 $cudaTag = $torchInfo.cuda_tag
 if (-not $torchBase -or -not $cudaTag -or $cudaTag -ne "cu130") {
   Write-Warning "Torch version/cuda metadata unsupported for xformers (base=$torchBase cuda=$cudaTag); skipping."
@@ -243,48 +220,64 @@ $source = "none"
 $errors = @()
 $version = $null
 $candidateWheel = $null
-$aiWheelUrl = $env:XFORMERS_AI_WHL_URL
-if ($aiWheelUrl) {
-  Write-Host "Using AI-windows-whl wheel URL from environment: $aiWheelUrl"
-  $compat = Select-CompatibleWheels -Python $python -WheelUrls @($aiWheelUrl) -TorchBaseVersion $torchBase -CudaTag $cudaTag
+$selectedUrl = "none"
+$gateReason = $null
+$explicitWheelUrl = $env:XFORMERS_WHEEL_URL
+if ($explicitWheelUrl) {
+  Write-Host "Using xformers wheel URL from environment: $explicitWheelUrl"
+  $compat = Select-CompatibleWheels -Python $python -WheelUrls @($explicitWheelUrl) -TorchBaseVersion $torchBase -CudaTag $cudaTag
   if ($compat.Count -gt 0) {
     $candidateWheel = $compat[0]
-    $source = "ai-windows-whl"
+    $source = "explicit-url"
+    $selectedUrl = $candidateWheel
   } else {
-    $errors += "AI-windows-whl wheel URL incompatible with torch $torchBase $cudaTag"
+    $errors += "Explicit xformers wheel URL incompatible with torch $torchBase $cudaTag"
   }
 }
 
 if (-not $candidateWheel) {
-  $aiIndexUrl = "https://ai-windows-whl.github.io/whl/xformers/"
-  Write-Host "=== Resolving AI-windows-whl xformers wheel from $aiIndexUrl ==="
-  $aiLinks = Get-WheelLinks -IndexUrl $aiIndexUrl -Pattern "xformers"
-  $aiCompat = Select-CompatibleWheels -Python $python -WheelUrls $aiLinks -TorchBaseVersion $torchBase -CudaTag $cudaTag
-  if ($aiCompat.Count -gt 0) {
-    $candidateWheel = ($aiCompat | Sort-Object)[-1]
-    $source = "ai-windows-whl"
+  $pythonTag = switch ($torchInfo.python_version) {
+    "3.13" { "cp313" }
+    "3.12" { "cp312" }
+    default { $null }
+  }
+  $resolved = Resolve-AIWindowsWheelUrl -Python $python -PackagePattern "xformers" -TorchInfo $torchInfo -PythonTag $pythonTag -AllowAbi3
+  if ($resolved.url) {
+    $candidateWheel = $resolved.url
+    $source = $resolved.source
+    $selectedUrl = $resolved.url
+  } else {
+    $gateReason = if ($resolved.reason) { $resolved.reason } else { "no wheels.json entry for xformers" }
   }
 }
 
 if (-not $candidateWheel) {
-  $pypiIndex = "https://pypi.org/simple/xformers/"
-  Write-Host "=== Resolving PyPI xformers wheels from $pypiIndex ==="
-  $pypiLinks = Get-WheelLinks -IndexUrl $pypiIndex -Pattern "xformers"
-  $pypiCompat = Select-CompatibleWheels -Python $python -WheelUrls $pypiLinks -TorchBaseVersion $torchBase -CudaTag $cudaTag
-  if ($pypiCompat.Count -gt 0) {
-    $candidateWheel = ($pypiCompat | Sort-Object)[-1]
-    $source = "pypi"
+  $fallbackIndex = $env:XFORMERS_FALLBACK_INDEX_URL
+  if ($fallbackIndex) {
+    Write-Host "=== Resolving xformers wheels from fallback index: $fallbackIndex ==="
+    $fallbackLinks = Get-WheelLinks -IndexUrl $fallbackIndex -Pattern "xformers"
+    $fallbackCompat = Select-CompatibleWheels -Python $python -WheelUrls $fallbackLinks -TorchBaseVersion $torchBase -CudaTag $cudaTag
+    if ($fallbackCompat.Count -gt 0) {
+      $candidateWheel = ($fallbackCompat | Sort-Object)[-1]
+      $source = "fallback-index"
+      $selectedUrl = $candidateWheel
+    } else {
+      $errors += "Fallback index provided but no compatible xformers wheels found"
+    }
   }
 }
 
 if (-not $candidateWheel) {
-  $errors += "GATED: no compatible xformers wheel for torch $torchBase ($cudaTag)"
-  Write-Warning "GATED: no compatible xformers wheel for torch $torchBase ($cudaTag). Skipping install."
+  $gateReason = if ($gateReason) { $gateReason } else { "no compatible xformers wheel for torch $torchBase ($cudaTag)" }
+  $errors += "GATED: $gateReason"
+  Write-Warning "GATED: $gateReason. Skipping install."
   $manifestEntry = [pscustomobject]@{
     name = "xformers"
     version = $null
     source = "gated"
     success = $false
+    url = $selectedUrl
+    gate_reason = $gateReason
     error_if_any = if ($errors.Count -gt 0) { $errors -join " | " } else { $null }
   }
   $existingResults = @()
@@ -309,6 +302,9 @@ if (-not $candidateWheel) {
 $installed = Try-PipInstall -Python $python -Label "Attempting xformers from $source (no deps)" -Arguments @("install", "--no-deps", $candidateWheel)
 if (-not $installed) {
   $errors += "pip install xformers ($source) failed"
+  if (-not $gateReason) {
+    $gateReason = "pip install failed for $source"
+  }
 }
 
 Write-Host "=== Skipping xformers source build attempt (optional) ==="
@@ -350,6 +346,8 @@ $manifestEntry = [pscustomobject]@{
   version = $version
   source = $source
   success = $installed
+  url = $selectedUrl
+  gate_reason = if (-not $installed) { $gateReason } else { $null }
   error_if_any = if ($errors.Count -gt 0) { $errors -join " | " } else { $null }
 }
 
