@@ -254,11 +254,18 @@ function Get-PythonTag {
   param(
     [string]$PythonVersion
   )
-  return switch ($PythonVersion) {
+  $mm = $null
+  if ($PythonVersion) {
+    $match = [regex]::Match($PythonVersion, "^(\\d+\\.\\d+)")
+    if ($match.Success) {
+      $mm = $match.Groups[1].Value
+    }
+  }
+  return (switch ($mm) {
     "3.13" { "cp313" }
     "3.12" { "cp312" }
     default { $null }
-  }
+  })
 }
 
 function Test-WheelUrlReachable {
