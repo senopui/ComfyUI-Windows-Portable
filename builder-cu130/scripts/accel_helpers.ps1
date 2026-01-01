@@ -257,15 +257,15 @@ function Get-PythonTag {
   param(
     [string]$PythonVersion
   )
-  $mm = $null
+  $normalized = $null
   if ($PythonVersion -and ($PythonVersion -match "^(?<mm>\\d+\\.\\d+)")) {
-    $mm = $Matches.mm
+    $normalized = $Matches.mm
   }
-  return (switch ($mm) {
-    "3.13" { "cp313" }
-    "3.12" { "cp312" }
-    default { $null }
-  })
+  switch ($normalized) {
+    "3.13" { return "cp313" }
+    "3.12" { return "cp312" }
+    default { return $null }
+  }
 }
 
 function Test-WheelUrlReachable {
