@@ -2,10 +2,13 @@ function Read-TextFileSafe {
   param(
     [string]$Path
   )
-  if (-not (Test-Path $Path)) {
+  if ([string]::IsNullOrWhiteSpace($Path)) {
     return ""
   }
-  $raw = Get-Content -Raw $Path -ErrorAction SilentlyContinue
+  if (-not (Test-Path -LiteralPath $Path)) {
+    return ""
+  }
+  $raw = Get-Content -Raw -LiteralPath $Path -ErrorAction SilentlyContinue
   if ($null -eq $raw) {
     return ""
   }
