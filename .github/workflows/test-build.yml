@@ -19,6 +19,15 @@ jobs:
           working-directory: builder
           run: bash stage2.sh
 
+        - name: Validate workflow nodes
+          shell: pwsh
+          run: |
+            $py = Join-Path $Env:GITHUB_WORKSPACE "builder" "ComfyUI_Windows_portable" "python_standalone" "python.exe"
+            if (-not (Test-Path $py)) {
+              throw "python_standalone not found at $py"
+            }
+            & $py (Join-Path $Env:GITHUB_WORKSPACE "scripts" "qa_validate_workflow.py")
+
         - name: Run Windows CPU smoke test
           shell: pwsh
           run: |

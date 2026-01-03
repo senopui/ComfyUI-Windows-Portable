@@ -49,12 +49,11 @@ The nightly build workflow includes comprehensive validation:
    * Clones ComfyUI from master branch
    * Clones all custom nodes
    * Downloads required models
-   * Runs quick test with --cpu flag
+   * Pre-packaging sanity checks for required launchers
 
 3. **Validation Steps**
-   * Runs quick test with CPU flag
-   * Captures logs and checks for tracebacks
-   * Fails build if errors are detected
+   * Validates packaged artifact layout after compression
+   * Fails build if required launchers or core files are missing
 
 4. **Stage 3: Compressing Package**
    * Creates split 7z archives
