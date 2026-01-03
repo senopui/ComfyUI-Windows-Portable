@@ -52,7 +52,7 @@ The nightly build workflow includes comprehensive validation:
    * Pre-packaging sanity checks for required launchers
 
 3. **Validation Steps**
-   * Validates packaged artifact layout before compression
+   * Validates packaged artifact layout after compression
    * Fails build if required launchers or core files are missing
 
 4. **Stage 3: Compressing Package**
