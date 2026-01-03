@@ -23,14 +23,14 @@ timm
 torchmetrics
 transformers
 
-# Make sure opencv version is compatible with numpy1.
+# Make sure opencv version is compatible with NumPy 1.x.
 numpy==1.26.4
 opencv-contrib-python
 opencv-contrib-python-headless
 opencv-python
 opencv-python-headless
 
-# Who needs numpy1: 
+# Who needs NumPy 1.x: 
 # 1. Jovimetrix (and 'cozy_comfy'/'cozy_comfyui' and 'blendmodes')
 # 2. ComfyUI-SAM2
 # 3. ComfyUI-ReActor

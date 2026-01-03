@@ -225,7 +225,7 @@ optional_vcs_error=""
 if [[ -s "$workdir"/pak7_optional_vcs.txt ]]; then
     optional_vcs_status="failed"
     if install_with_retries "Installing pak7_optional_vcs.txt (optional VCS deps)" \
-        $pip_exe install -r "$workdir"/pak7_optional_vcs.txt; then
+        $pip_exe install --no-deps -r "$workdir"/pak7_optional_vcs.txt; then
         optional_vcs_status="success"
     else
         optional_vcs_error="pip install failed; optional dependencies skipped"
@@ -253,6 +253,8 @@ cat > "$workdir"/vcs_optional_manifest.json <<EOF
   ]
 }
 EOF
+
+verify_torch_or_restore "optional VCS install group"
 
 # temp-fix: Prevent SAM-3 from installing its older dependencies
 echo "=== Installing SAM3 (no-deps) ==="
