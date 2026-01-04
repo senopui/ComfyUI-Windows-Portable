@@ -38,16 +38,25 @@
 - CUDA device query warnings on CI runner (expected on non-GPU runner).
 
 ## Accelerator Status (accel_manifest.json)
-> accel_manifest.json is the authoritative source for accelerator gating and install outcomes.
+Short-field rule: values are the first ~120 characters with newlines stripped; no stack traces. Evidence source is `/tmp/evidence/accel_manifest.json`.
 
-| Accelerator | Status | Version | Source | Reason |
-| --- | --- | --- | --- | --- |
-| triton-windows | success | 3.5.1.post23 | pypi | Installed successfully. |
-| flash-attn | gated | — | none | Unsupported Python 3.13; no wheel available. |
-| flash_attn_3 | gated | — | none | Unsupported Python 3.13; wheel unavailable. |
-| sageattention | gated | — | pypi | Missing `triton` dependency (`No module named 'triton'`). |
-| sageattention2 | gated | — | none | Unsupported Python 3.13; no wheel available. |
-| sageattention2pp | gated | — | unsupported | Unsupported (SAGEATTENTION2PP_PACKAGE not set). |
+Summary: `triton-windows` installed successfully. All other listed accelerators were gated or failed due to Python 3.13 wheel gaps or missing dependencies.
+
+| name | requested | success | version | source | gated | gate_reason (short) | error_if_any (short) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| sageattention2pp | — | False | — | unsupported | — | unsupported (SAGEATTENTION2PP_PACKAGE not set) | unsupported (SAGEATTENTION2PP_PACKAGE not set) |
+| flash-attn | source_spec=flash-attn; pattern=flash[_-]attn | False | — | none | True | unsupported python version 3.13 | pip exit 1: / unsupported python version 3.13 / Source build not feasible on Windows runner. |
+| flash_attn_3 | source_spec=flash-attn-3; pattern=flash[_-]attn[_-]?3 | False | — | none | True | unsupported python version 3.13 | pip exit 1: / unsupported python version 3.13 / flash_attn_3 wheel unavailable for this build. |
+| sageattention | source_spec=sageattention; pattern=sageattention | False | — | pypi | True | D:\a\ComfyUI-Windows-Portable\ComfyUI-Windows-Portable\builder-cu130\python_standalone\Lib\site-packages\torch\cuda\__in | D:\a\ComfyUI-Windows-Portable\ComfyUI-Windows-Portable\builder-cu130\python_standalone\Lib\site-packages\torch\cuda\__in |
+| sageattention2 | source_spec=sageattention2; pattern=sageattention2 | False | — | none | True | unsupported python version 3.13 | pip exit 1: / unsupported python version 3.13 / Source build not feasible on Windows runner. |
+| triton-windows | source_spec=triton-windows<3.6; pattern=triton[_-]windows | True | 3.5.1.post23 | pypi | False | — | — |
+
+### Action Plan (top 5 blockers from manifest)
+1. FlashAttention (flash-attn): enable cp313/cu130 wheel or keep gated with explicit release tracking.
+2. FlashAttention 3 (flash_attn_3): publish cp313/cu130 wheel; keep gated until available.
+3. SageAttention: resolve missing `triton` dependency or gate cleanly on cp313.
+4. SageAttention2: publish cp313 wheel or keep gated; confirm Windows source build feasibility.
+5. SageAttention2++: set `SAGEATTENTION2PP_PACKAGE` when supported; otherwise keep gated explicitly.
 
 ## Runtime Status (local_comfyui_startup.log)
 | Missing import / issue | Classification | Recommended handling |
@@ -64,4 +73,3 @@
 5. **P2 – flash-attn / flash_attn_3 wheels** | Owner: packaging | Scope: optional accelerator install | Acceptance: detect wheel availability for cp313/cu130 or continue gating without error.
 6. **P3 – Python standalone SHA256 lookup warnings** | Owner: CI/workflow | Scope: Python resolver in CI | Acceptance: avoid “latest attempt missing SHA256” warning when pinned build is used.
 7. **P3 – AnimateDiffEvo model availability** | Owner: docs/packaging | Scope: documentation or optional model pack | Acceptance: users have a clear path to obtain required motion models.
-
