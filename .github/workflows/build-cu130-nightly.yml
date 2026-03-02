@@ -128,7 +128,7 @@ jobs:
             $data | Select-Object name, version, source, success | Format-Table -AutoSize
 
         - name: Upload accelerator manifest
-          uses: actions/upload-artifact@v4
+          uses: actions/upload-artifact@v7
           with:
             name: accel-manifest
             path: builder-cu130/accel_manifest.json
