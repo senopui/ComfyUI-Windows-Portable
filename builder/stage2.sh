@@ -22,14 +22,14 @@ mkdir -p "${TORCH_HOME}"
 mv  "$workdir"/python_standalone  "$workdir"/ComfyUI_Windows_portable/python_standalone
 
 # Add MinGit (Portable Git)
-curl -sSL https://github.com/git-for-windows/git/releases/download/v2.52.0.windows.1/MinGit-2.52.0-64-bit.zip \
+curl -sSL https://github.com/git-for-windows/git/releases/download/v2.53.0.windows.1/MinGit-2.53.0-64-bit.zip \
     -o MinGit.zip
 unzip -q MinGit.zip -d "$workdir"/ComfyUI_Windows_portable/MinGit
 rm MinGit.zip
 
 ################################################################################
 # ComfyUI main app
-git clone https://github.com/comfyanonymous/ComfyUI.git \
+git clone https://github.com/Comfy-Org/ComfyUI.git \
     "$workdir"/ComfyUI_Windows_portable/ComfyUI
 # Use latest stable version (has a release tag)
 cd "$workdir"/ComfyUI_Windows_portable/ComfyUI
@@ -46,37 +46,41 @@ $gcs https://github.com/Comfy-Org/ComfyUI-Manager.git
 $gcs https://github.com/city96/ComfyUI-GGUF.git
 $gcs https://github.com/nunchaku-tech/ComfyUI-nunchaku.git
 $gcs https://github.com/woct0rdho/ComfyUI-RadialAttn.git
-$gcs https://github.com/welltop-cn/ComfyUI-TeaCache.git
 
 # Workspace
 $gcs https://github.com/crystian/ComfyUI-Crystools.git
 $gcs https://github.com/pydn/ComfyUI-to-Python-Extension.git
+$gcs https://github.com/chrisgoringe/cg-use-everywhere.git
+$gcs https://github.com/willmiao/ComfyUI-Lora-Manager.git
+$gcs https://github.com/alexopus/ComfyUI-Image-Saver.git
+$gcs https://github.com/SLAPaper/ComfyUI-Image-Selector.git
 
 # General
-$gcs https://github.com/bash-j/mikey_nodes.git
-$gcs https://github.com/chrisgoringe/cg-use-everywhere.git
-$gcs https://github.com/jags111/efficiency-nodes-comfyui.git
+$gcs https://github.com/ltdrdata/was-node-suite-comfyui.git
 $gcs https://github.com/kijai/ComfyUI-KJNodes.git
+$gcs https://github.com/bash-j/mikey_nodes.git
+$gcs https://github.com/jags111/efficiency-nodes-comfyui.git
 $gcs https://github.com/mirabarukaso/ComfyUI_Mira.git
 $gcs https://github.com/pythongosssss/ComfyUI-Custom-Scripts.git
 $gcs https://github.com/rgthree/rgthree-comfy.git
 $gcs https://github.com/shiimizu/ComfyUI_smZNodes.git
-$gcs https://github.com/ltdrdata/was-node-suite-comfyui.git
 $gcs https://github.com/yolain/ComfyUI-Easy-Use.git
 
 # Control
-$gcs https://github.com/chflame163/ComfyUI_LayerStyle.git
+$gcs https://github.com/ltdrdata/ComfyUI-Impact-Pack.git
+$gcs https://github.com/ltdrdata/ComfyUI-Impact-Subpack.git
+$gcs https://github.com/ltdrdata/ComfyUI-Inspire-Pack.git
 $gcs https://github.com/Fannovel16/comfyui_controlnet_aux.git
+$gcs https://github.com/chflame163/ComfyUI_LayerStyle.git
 $gcs https://github.com/florestefano1975/comfyui-portrait-master.git
 $gcs https://github.com/huchenlei/ComfyUI-IC-Light-Native.git
 $gcs https://github.com/huchenlei/ComfyUI-layerdiffuse.git
 $gcs https://github.com/Jonseed/ComfyUI-Detail-Daemon.git
 $gcs https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet.git
-$gcs https://github.com/ltdrdata/ComfyUI-Impact-Pack.git
-$gcs https://github.com/ltdrdata/ComfyUI-Impact-Subpack.git
-$gcs https://github.com/ltdrdata/ComfyUI-Inspire-Pack.git
 $gcs https://github.com/mcmonkeyprojects/sd-dynamic-thresholding.git
 $gcs https://github.com/twri/sdxl_prompt_styler.git
+$gcs https://github.com/pamparamm/ComfyUI-ppm.git
+$gcs https://github.com/KohakuBlueleaf/z-tipo-extension.git
 
 # Video
 $gcs https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git
@@ -91,13 +95,12 @@ $gcs https://github.com/digitaljohn/comfyui-propost.git
 $gcs https://github.com/kijai/ComfyUI-DepthAnythingV2.git
 $gcs https://github.com/kijai/ComfyUI-Florence2.git
 $gcs https://github.com/pythongosssss/ComfyUI-WD14-Tagger.git
-$gcs https://github.com/SLAPaper/ComfyUI-Image-Selector.git
 $gcs https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git
+$gcs https://github.com/1038lab/ComfyUI-QwenVL.git
 
 # To be removed in future
 $gcs https://github.com/cubiq/ComfyUI_essentials.git
 $gcs https://github.com/cubiq/ComfyUI_IPAdapter_plus.git
-$gcs https://github.com/CY-CHENYUE/ComfyUI-Janus-Pro.git
 $gcs https://github.com/FizzleDorf/ComfyUI_FizzNodes.git
 $gcs https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git
 
@@ -114,7 +117,7 @@ du -hd2 "$workdir"/ComfyUI_Windows_portable
 cd "$workdir"
 $gcs https://github.com/madebyollin/taesd.git
 mkdir -p "$workdir"/ComfyUI_Windows_portable/ComfyUI/models/vae_approx
-cp taesd/*_decoder.pth \
+cp taesd/*.pth \
     "$workdir"/ComfyUI_Windows_portable/ComfyUI/models/vae_approx/
 rm -rf taesd
 
@@ -135,8 +138,7 @@ cd "$workdir"/ComfyUI_Windows_portable
 #rm -rf "$workdir"/ComfyUI_Windows_portable/python_standalone/Lib/site-packages/pymatting
 rm -vf "$workdir"/ComfyUI_Windows_portable/*.log
 rm -vf "$workdir"/ComfyUI_Windows_portable/ComfyUI/user/*.log
-# Keep Manager's cache (ComfyRegistry)
-#rm -vrf "$workdir"/ComfyUI_Windows_portable/ComfyUI/user/__manager
+rm -vrf "$workdir"/ComfyUI_Windows_portable/ComfyUI/user/__manager
 
 cd "$workdir"/ComfyUI_Windows_portable/ComfyUI/custom_nodes
 rm -vf ./ComfyUI-Custom-Scripts/pysssss.json

@@ -4,7 +4,7 @@ set -eu
 echo '#' > pak5.txt
 
 array=(
-https://github.com/comfyanonymous/ComfyUI/raw/refs/heads/master/requirements.txt
+https://github.com/Comfy-Org/ComfyUI/raw/refs/heads/master/requirements.txt
 https://github.com/Comfy-Org/ComfyUI-Manager/raw/refs/heads/main/requirements.txt
 https://github.com/crystian/ComfyUI-Crystools/raw/refs/heads/main/requirements.txt
 https://github.com/cubiq/ComfyUI_essentials/raw/refs/heads/main/requirements.txt
@@ -23,7 +23,7 @@ https://github.com/ltdrdata/was-node-suite-comfyui/raw/refs/heads/main/requireme
 )
 
 for line in "${array[@]}";
-    do curl -w "\n" -sSL "${line}" >> pak5.txt
+    do curl -Lw "\n" -sSL "${line}" >> pak5.txt
 done
 
 sed -i '/^#/d' pak5.txt

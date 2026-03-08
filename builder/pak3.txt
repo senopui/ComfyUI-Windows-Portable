@@ -1,6 +1,5 @@
 --index-url https://download.pytorch.org/whl/cu130
-#--extra-index-url https://pypi.org/simple
-#xformers
-torch
+xformers
+torch==2.10.0
 torchvision
 torchaudio

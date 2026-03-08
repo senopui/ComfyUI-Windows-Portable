@@ -29,7 +29,7 @@ rm MinGit.zip
 
 ################################################################################
 # ComfyUI main app
-git clone https://github.com/comfyanonymous/ComfyUI.git \
+git clone https://github.com/Comfy-Org/ComfyUI.git \
     "$workdir"/ComfyUI_Windows_portable/ComfyUI
 # Use latest stable version (has a release tag)
 cd "$workdir"/ComfyUI_Windows_portable/ComfyUI
@@ -122,7 +122,7 @@ du -hd2 "$workdir"/ComfyUI_Windows_portable
 cd "$workdir"
 $gcs https://github.com/madebyollin/taesd.git
 mkdir -p "$workdir"/ComfyUI_Windows_portable/ComfyUI/models/vae_approx
-cp taesd/*_decoder.pth \
+cp taesd/*.pth \
     "$workdir"/ComfyUI_Windows_portable/ComfyUI/models/vae_approx/
 rm -rf taesd
 

@@ -12,7 +12,7 @@ ls -lahF
 
 # Download Python Standalone
 curl -sSL \
-https://github.com/astral-sh/python-build-standalone/releases/download/20251217/cpython-3.12.12+20251217-x86_64-pc-windows-msvc-install_only.tar.gz \
+https://github.com/astral-sh/python-build-standalone/releases/download/20260114/cpython-3.12.12+20260114-x86_64-pc-windows-msvc-install_only.tar.gz \
     -o python.tar.gz
 tar -zxf python.tar.gz
 mv python python_standalone
@@ -23,7 +23,7 @@ $pip_exe install --upgrade pip wheel setuptools
 $pip_exe install -r "$workdir"/pak2.txt
 $pip_exe install -r "$workdir"/pak3.txt
 
-# temp-fix, TODO: remove after version chaos resolved
+# Temp-fix for Transformers version chaos
 $pip_exe install transformers
 
 $pip_exe install -r "$workdir"/pak4.txt
@@ -31,15 +31,16 @@ $pip_exe install -r "$workdir"/pak5.txt
 $pip_exe install -r "$workdir"/pak6.txt
 $pip_exe install -r "$workdir"/pak7.txt
 
-# temp-fix: Prevent SAM-3 from installing its older dependencies
+# Temp-fix: Prevent SAM-3 from installing its older dependencies
 $pip_exe install --no-deps 'git+https://github.com/facebookresearch/sam3.git'
 
 $pip_exe install -r "$workdir"/pak8.txt
 
 # Install comfyui-frontend-package, version determined by ComfyUI release version.
-latest_tag=$(curl -s https://api.github.com/repos/comfyanonymous/ComfyUI/tags | jq -r '.[0].name')
-$pip_exe install -r "https://github.com/comfyanonymous/ComfyUI/raw/refs/tags/${latest_tag}/requirements.txt"
+latest_tag=$(curl -sL https://api.github.com/repos/Comfy-Org/ComfyUI/tags | jq -r '.[0].name')
+$pip_exe install -r "https://github.com/Comfy-Org/ComfyUI/raw/refs/tags/${latest_tag}/requirements.txt"
 
+$pip_exe install -r "$workdir"/pakX.txt
 $pip_exe install -r "$workdir"/pakY.txt
 $pip_exe install -r "$workdir"/pakZ.txt
 

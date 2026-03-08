@@ -12,7 +12,7 @@ ls -lahF
 
 # Download Python Standalone
 curl -sSL \
-https://github.com/astral-sh/python-build-standalone/releases/download/20251217/cpython-3.13.11+20251217-x86_64-pc-windows-msvc-install_only.tar.gz \
+https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.13.12+20260211-x86_64-pc-windows-msvc-install_only.tar.gz \
     -o python.tar.gz
 tar -zxf python.tar.gz
 mv python python_standalone
@@ -23,12 +23,12 @@ $pip_exe install --upgrade pip wheel setuptools
 $pip_exe install -r "$workdir"/pak2.txt
 $pip_exe install -r "$workdir"/pak3.txt
 
-# tempFix for TF. TODO: remove after version chaos resolved
+# Temp-fix for version chaos of Transformers
 $pip_exe install transformers
 
 $pip_exe install -r "$workdir"/pak4.txt
 
-# tempFix for ORT cu13
+# Temp-fix for ONNX Runtime on cu13
 $pip_exe install flatbuffers numpy packaging protobuf sympy
 $pip_exe install onnxruntime-gpu
 $pip_exe uninstall --yes onnxruntime-gpu
@@ -37,11 +37,22 @@ $pip_exe install --pre --no-deps --index-url https://aiinfra.pkgs.visualstudio.c
 $pip_exe install -r "$workdir"/pak5.txt
 $pip_exe install -r "$workdir"/pak6.txt
 $pip_exe install -r "$workdir"/pak7.txt
+
+# Temp-fix for compel
+# compel is used by smZNodes
+$pip_exe install notebook pyparsing
+$pip_exe install --no-deps compel
+
+# Temp-fix: Prevent SAM-3 from installing its older dependencies
+$pip_exe install --no-deps 'git+https://github.com/facebookresearch/sam3.git'
+
 $pip_exe install -r "$workdir"/pak8.txt
 
+$pip_exe install comfy-kitchen[cublas]
+
 # Install comfyui-frontend-package, version determined by ComfyUI release version.
-latest_tag=$(curl -s https://api.github.com/repos/comfyanonymous/ComfyUI/tags | jq -r '.[0].name')
-$pip_exe install -r "https://github.com/comfyanonymous/ComfyUI/raw/refs/tags/${latest_tag}/requirements.txt"
+latest_tag=$(curl -sL https://api.github.com/repos/Comfy-Org/ComfyUI/tags | jq -r '.[0].name')
+$pip_exe install -r "https://github.com/Comfy-Org/ComfyUI/raw/refs/tags/${latest_tag}/requirements.txt"
 
 $pip_exe install -r "$workdir"/pakY.txt
 
